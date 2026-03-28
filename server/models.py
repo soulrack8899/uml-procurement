@@ -7,6 +7,7 @@ from sqlmodel import Field, Relationship, SQLModel, create_engine, Session, sele
 
 class StatusEnum(str, Enum):
     DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED" # Renamed from PENDING_MANAGER
     PENDING_MANAGER = "PENDING_MANAGER"
     PENDING_DIRECTOR = "PENDING_DIRECTOR"
     APPROVED = "APPROVED"
@@ -15,7 +16,7 @@ class StatusEnum(str, Enum):
     PAID = "PAID"
 
 class PettyCashStatus(str, Enum):
-    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
     APPROVED = "APPROVED"
     DISBURSED = "DISBURSED"
 
@@ -24,6 +25,14 @@ class UserRole(str, Enum):
     MANAGER = "MANAGER"
     DIRECTOR = "DIRECTOR"
     FINANCE = "FINANCE"
+    ADMIN = "ADMIN"
+
+# --- Multi-Tenant Mapping ---
+
+class UserTenant(SQLModel, table=True):
+    """Bridge table for User-to-Tenant access control"""
+    user_id: int = Field(foreign_key="user.id", primary_key=True)
+    company_id: int = Field(foreign_key="company.id", primary_key=True)
 
 # --- Multi-Tenant Models ---
 
@@ -35,15 +44,14 @@ class Company(SQLModel, table=True):
     
     settings: "CompanySettings" = Relationship(back_populates="company")
     requests: List["ProcurementRequest"] = Relationship(back_populates="company")
-    users: List["User"] = Relationship(back_populates="company")
     petty_cash: List["PettyCash"] = Relationship(back_populates="company")
+    users: List["User"] = Relationship(back_populates="companies", link_model=UserTenant)
 
 class CompanySettings(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(foreign_key="company.id")
     approval_threshold: float = Field(default=5000.0)
     currency: str = Field(default="RM")
-    retention_period_days: int = Field(default=365)
     
     company: Company = Relationship(back_populates="settings")
 
@@ -51,9 +59,8 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     role: UserRole
-    company_id: int = Field(foreign_key="company.id")
     
-    company: Company = Relationship(back_populates="users")
+    companies: List[Company] = Relationship(back_populates="users", link_model=UserTenant)
 
 # --- Procurement Models ---
 
@@ -86,7 +93,7 @@ class LineItem(SQLModel, table=True):
 class FileMetadata(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     filename: str
-    file_type: str  # 'QUOTE', 'RECEIPT', 'PO'
+    file_type: str
     file_path: str
     uploaded_at: datetime = Field(default_factory=datetime.utcnow)
     request_id: int = Field(foreign_key="procurementrequest.id")
@@ -98,13 +105,13 @@ class FileMetadata(SQLModel, table=True):
 class PettyCash(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(foreign_key="company.id")
-    requester_name: str
+    requester_id: int = Field(foreign_key="user.id")
     amount: float
     receipt_url: Optional[str] = None
-    status: PettyCashStatus = Field(default=PettyCashStatus.PENDING)
+    status: PettyCashStatus = Field(default=PettyCashStatus.SUBMITTED)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     disbursed_at: Optional[datetime] = None
-    disbursed_by: Optional[str] = None
+    disbursed_by_id: Optional[int] = Field(default=None, foreign_key="user.id")
     
     company: Company = Relationship(back_populates="petty_cash")
 

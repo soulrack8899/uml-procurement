@@ -1,51 +1,35 @@
 const API_BASE_URL = "http://localhost:8000";
 
 const getHeaders = () => {
-  const companyId = localStorage.getItem("currentCompanyId") || "1"; // Default to UMLAB Sarawak
+  const companyId = localStorage.getItem("currentCompanyId") || "1"; 
+  const userId = localStorage.getItem("currentUserId") || "1"; // Default to initial admin if none set
   return {
     "Content-Type": "application/json",
-    "X-Company-ID": companyId
+    "X-Company-ID": companyId,
+    "X-User-ID": userId
   };
 };
 
 export const procurementApi = {
-  // --- Companies & Onboarding ---
+  // --- Companies ---
   getCompanies: async () => {
     const response = await fetch(`${API_BASE_URL}/companies/`);
     return response.json();
   },
   
-  createCompany: async (data) => {
-    const response = await fetch(`${API_BASE_URL}/companies/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    return response.json();
-  },
-
-  getSettings: async (cid) => {
-    const response = await fetch(`${API_BASE_URL}/companies/${cid}/settings`);
-    return response.json();
-  },
-
-  updateSettings: async (cid, threshold) => {
-    const response = await fetch(`${API_BASE_URL}/companies/${cid}/settings?threshold=${threshold}`, {
-      method: "PATCH"
-    });
-    return response.json();
-  },
-
   // --- Procurement ---
   getRequests: async () => {
     const response = await fetch(`${API_BASE_URL}/requests/`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Failed to fetch requests");
+    if (!response.ok) {
+       if (response.status === 403) throw new Error("Unauthorized access to tenant ledger.");
+       throw new Error("Failed to fetch requests");
+    }
     return response.json();
   },
   
   getRequest: async (id) => {
     const response = await fetch(`${API_BASE_URL}/requests/${id}`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Failed to fetch request details");
+    if (!response.ok) throw new Error("Failed to fetch request details in context");
     return response.json();
   },
   
@@ -55,12 +39,11 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to create request");
     return response.json();
   },
   
-  transitionStatus: async (requestId, targetStatus, userName, userRole) => {
-    const response = await fetch(`${API_BASE_URL}/requests/${requestId}/transition?target_status=${targetStatus}&user_name=${userName}&user_role=${userRole}`, {
+  transitionStatus: async (requestId) => {
+    const response = await fetch(`${API_BASE_URL}/requests/${requestId}/transition`, {
       method: "POST",
       headers: getHeaders(),
     });
@@ -86,8 +69,16 @@ export const procurementApi = {
     return response.json();
   },
 
-  disbursePettyCash: async (pcId, userName) => {
-    const response = await fetch(`${API_BASE_URL}/petty-cash/${pcId}/disburse?user_name=${userName}`, {
+  approvePettyCash: async (pcId) => {
+    const response = await fetch(`${API_BASE_URL}/petty-cash/${pcId}/approve`, {
+      method: "POST",
+      headers: getHeaders(),
+    });
+    return response.json();
+  },
+
+  disbursePettyCash: async (pcId) => {
+    const response = await fetch(`${API_BASE_URL}/petty-cash/${pcId}/disburse`, {
       method: "POST",
       headers: getHeaders(),
     });
