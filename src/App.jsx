@@ -1,31 +1,24 @@
 import React, { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Bell, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+
 import Dashboard from './pages/Dashboard'
 import ProcurementForm from './pages/ProcurementForm'
 import VendorDirectory from './pages/VendorDirectory'
 import ApprovalView from './pages/ApprovalView'
+import RequestDetails from './pages/RequestDetails'
 
-function App() {
-  const [activePage, setActivePage] = useState('dashboard')
+function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const location = useLocation()
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { id: 'procurement', label: 'Procurement', icon: <FileText size={20} /> },
-    { id: 'vendors', label: 'Vendor Directory', icon: <Users size={20} /> },
-    { id: 'approvals', label: 'Approvals', icon: <CheckSquare size={20} /> },
+    { id: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: '/procurement', label: 'Procurement', icon: <FileText size={20} /> },
+    { id: '/vendors', label: 'Vendor Directory', icon: <Users size={20} /> },
+    { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} /> },
   ]
-
-  const renderPage = () => {
-    switch(activePage) {
-      case 'dashboard': return <Dashboard />
-      case 'procurement': return <ProcurementForm />
-      case 'vendors': return <VendorDirectory />
-      case 'approvals': return <ApprovalView />
-      default: return <Dashboard />
-    }
-  }
 
   return (
     <div className="min-h-screen bg-surface flex">
@@ -37,27 +30,27 @@ function App() {
       >
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 rounded-sm gradient-fill flex items-center justify-center text-white shrink-0">
-            <span className="font-bold">U</span>
+            <span className="font-bold text-lg">U</span>
           </div>
           {sidebarOpen && (
             <motion.h1 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="title-lg whitespace-nowrap"
+              className="title-lg font-black whitespace-nowrap tracking-tight"
             >
-              UMLAB
+              UMLAB SARAWAK
             </motion.h1>
           )}
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
           {navItems.map((item) => (
-            <button
+            <Link
               key={item.id}
-              onClick={() => setActivePage(item.id)}
+              to={item.id}
               className={`w-full flex items-center gap-4 p-3 rounded-sm transition-colors ${
-                activePage === item.id 
-                  ? 'bg-primary text-white' 
+                location.pathname === item.id 
+                  ? 'bg-primary text-white shadow-ambient' 
                   : 'text-on-surface-variant hover:bg-surface-container-high'
               }`}
             >
@@ -66,19 +59,19 @@ function App() {
                 <motion.span 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="label-md"
+                  className="label-md font-bold"
                 >
                   {item.label}
                 </motion.span>
               )}
-            </button>
+            </Link>
           ))}
         </nav>
 
         <div className="p-4 px-6 border-t border-outline-variant-low">
           <button className="flex items-center gap-4 text-on-surface-variant hover:text-on-surface transition-colors p-3 w-full">
             <Settings size={20} />
-            {sidebarOpen && <span className="label-md">Settings</span>}
+            {sidebarOpen && <span className="label-md font-bold">Settings</span>}
           </button>
         </div>
       </motion.aside>
@@ -102,22 +95,22 @@ function App() {
               <input 
                 type="text" 
                 placeholder="Search ledger records..." 
-                className="bg-transparent border-none outline-none text-sm w-full label-md"
+                className="bg-transparent border-none outline-none text-sm w-full label-md font-medium"
               />
             </div>
           </div>
           
           <div className="flex items-center gap-6">
-            <button className="relative p-2 text-on-surface-variant">
+            <button className="relative p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border border-white" />
             </button>
             <div className="flex items-center gap-3 pl-4 border-l border-outline-variant-low">
               <div className="text-right">
-                <p className="label-md font-semibold">K. Albert</p>
-                <p className="label-sm text-on-surface-variant">Procurement Head</p>
+                <p className="label-md font-black">K. Albert</p>
+                <p className="label-sm text-on-surface-variant font-bold uppercase tracking-wider">Lab Manager</p>
               </div>
-              <div className="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-bold">
+              <div className="w-10 h-10 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center text-primary font-black text-xs">
                 KA
               </div>
             </div>
@@ -125,21 +118,27 @@ function App() {
         </header>
 
         {/* Page Content */}
-        <div className="p-8">
+        <div className="p-12 overflow-x-hidden">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activePage}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {renderPage()}
-            </motion.div>
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/procurement" element={<ProcurementForm />} />
+              <Route path="/vendors" element={<VendorDirectory />} />
+              <Route path="/approvals" element={<ApprovalView />} />
+              <Route path="/request/:id" element={<RequestDetails />} />
+            </Routes>
           </AnimatePresence>
         </div>
       </main>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   )
 }
 

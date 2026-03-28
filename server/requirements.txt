@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlmodel
+reportlab
+python-multipart
+sqlalchemy
+alembic
+pydantic
+pydantic-settings
+python-dotenv
+email-validator
