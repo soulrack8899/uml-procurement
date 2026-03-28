@@ -1,10 +1,9 @@
-// Trigger redeploy
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowUpRight, ArrowDownRight, TrendingUp, PieChart, ShoppingCart, Activity, Plus, Search, Filter } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, ShoppingCart, Activity, Plus, Search, Filter } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { procurementApi } from '../services/api'
-import { useCompany } from '../App'
+import { useCompany, getStatusChipClass } from '../App'
 
 const Dashboard = () => {
   const { currentCompany } = useCompany()
@@ -35,52 +34,69 @@ const Dashboard = () => {
   ]
 
   return (
-    <div className="space-y-12">
-      {/* Hero Section */}
-      <section className="flex items-center justify-between">
-        <div className="flex flex-col gap-2">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      {/* Hero */}
+      <section style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div>
           <motion.p 
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            className="label-md text-primary font-black uppercase tracking-widest flex items-center gap-2"
+            style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
             Digital Ledger Context 
-            <span className="h-1 w-1 bg-primary rounded-full" />
-            <span className="text-on-surface-variant">{currentCompany?.name || 'Loading...'}</span>
+            <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--primary)', display: 'inline-block' }} />
+            <span style={{ color: 'var(--on-surface-variant)' }}>{currentCompany?.name || 'Loading...'}</span>
           </motion.p>
           <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="display-md text-on-surface text-5xl font-black tracking-tight"
+            transition={{ delay: 0.05 }}
+            style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--on-surface)' }}
           >
             SaaS Operational Overview
           </motion.h1>
         </div>
-        <Link to="/procurement" className="flex items-center gap-3 px-8 py-4 gradient-fill text-white label-md font-bold rounded-sm shadow-ambient hover:opacity-90 transition-opacity">
-          <Plus size={18} />
-          New Procurement Request
+        <Link 
+          to="/procurement" 
+          style={{ 
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            padding: '0.75rem 1.5rem', background: 'var(--primary)', color: 'var(--on-primary)',
+            fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '0.875rem',
+            borderRadius: 'var(--radius-sm)', textDecoration: 'none', transition: 'background 0.15s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-container)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'var(--primary)'}
+        >
+          <Plus size={16} />
+          New Procurement
         </Link>
       </section>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      {/* Stats Grid (Stitch: tonal layering, no borders) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
         {stats.map((stat, i) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="surface-card hover-lift border-t-2 border-outline-variant-low hover:border-primary"
+            transition={{ delay: i * 0.06 }}
+            className="surface-card"
+            style={{ padding: '1.25rem 1.5rem' }}
           >
-            <p className="label-sm text-on-surface-variant font-bold uppercase tracking-wider mb-2">{stat.label}</p>
-            <div className="flex items-end justify-between">
-              <h2 className="title-lg text-primary font-black text-3xl">{stat.value}</h2>
-              <span className={`inline-flex items-center gap-1 label-sm font-bold ${
-                stat.type === 'positive' ? 'text-tertiary-fixed' : 'text-error'
-              }`}>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+              {stat.label}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <h2 style={{ fontFamily: 'var(--font-headline)', fontWeight: 900, fontSize: '1.75rem', color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+                {stat.value}
+              </h2>
+              <span style={{ 
+                display: 'inline-flex', alignItems: 'center', gap: '0.125rem',
+                fontFamily: 'var(--font-label)', fontSize: '0.6875rem', fontWeight: 700,
+                color: stat.type === 'positive' ? 'var(--on-tertiary-fixed-variant)' : 'var(--error)'
+              }}>
                 {stat.change}
-                {stat.type === 'positive' ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                {stat.type === 'positive' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
               </span>
             </div>
           </motion.div>
@@ -88,57 +104,71 @@ const Dashboard = () => {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Recent Activity Table */}
-        <section className="lg:col-span-2 space-y-8">
-          <div className="flex items-center justify-between">
-            <h3 className="title-lg font-black flex items-center gap-3">
-              <ShoppingCart size={22} className="text-primary" />
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem' }}>
+        {/* Request Stream (Stitch: no dividers, vertical white space, alternating bg) */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3 className="title-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <ShoppingCart size={20} style={{ color: 'var(--primary)' }} />
               Tenant Request Stream
             </h3>
-            <div className="flex items-center gap-4">
-               <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors text-on-surface-variant">
-                  <Search size={20} />
-               </button>
-               <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors text-on-surface-variant">
-                  <Filter size={20} />
-               </button>
+            <div style={{ display: 'flex', gap: '0.25rem' }}>
+              <button style={{ padding: '0.5rem', borderRadius: 'var(--radius-pill)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--on-surface-variant)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-high)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <Search size={18} />
+              </button>
+              <button style={{ padding: '0.5rem', borderRadius: 'var(--radius-pill)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--on-surface-variant)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-high)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <Filter size={18} />
+              </button>
             </div>
           </div>
           
-          <div className="overflow-hidden bg-surface-container-lowest rounded-sm shadow-ambient border border-outline-variant-low">
-            <table className="w-full text-left border-collapse">
+          <div className="surface-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontFamily: 'var(--font-label)' }}>
               <thead>
-                <tr className="bg-surface-container-low border-b border-outline-variant-low">
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Sequencer ID</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Vendor Context</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Amount (RM)</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Protocol Flow</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Action</th>
+                <tr style={{ background: 'var(--surface-container-low)' }}>
+                  {['ID', 'Vendor', 'Amount (RM)', 'Status', 'Action'].map(h => (
+                    <th key={h} style={{ padding: '0.875rem 1.25rem', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="5" className="p-12 text-center label-md animate-pulse">Syncing with tenant ledger...</td></tr>
+                  <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', fontFamily: 'var(--font-label)', fontSize: '0.875rem' }} className="animate-pulse">Syncing with tenant ledger...</td></tr>
                 ) : requests.length === 0 ? (
-                  <tr><td colSpan="5" className="p-12 text-center text-on-surface-variant label-md">No records found for this context.</td></tr>
+                  <tr><td colSpan="5" style={{ padding: '3rem', textAlign: 'center', color: 'var(--on-surface-variant)', fontFamily: 'var(--font-label)' }}>No records found for this context.</td></tr>
                 ) : requests.map((req, i) => (
-                  <tr key={req.id} className="hover:bg-surface-container-low transition-colors group border-b border-outline-variant-low last:border-none">
-                    <td className="p-6 label-md font-black text-primary">#{req.id}</td>
-                    <td className="p-6">
-                      <p className="body-md font-bold">{req.vendor_name}</p>
-                      <p className="label-sm text-on-surface-variant font-medium">ID: {req.vendor_id}</p>
+                  <tr 
+                    key={req.id}
+                    style={{ background: i % 2 === 0 ? 'transparent' : 'var(--surface-container-low)', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-high)'}
+                    onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'var(--surface-container-low)'}
+                  >
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 900, color: 'var(--primary)', fontSize: '0.875rem' }}>#{req.id}</td>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
+                      <p style={{ fontWeight: 600, fontSize: '0.875rem' }}>{req.vendor_name}</p>
+                      <p style={{ fontSize: '0.625rem', color: 'var(--outline)' }}>ID: {req.vendor_id}</p>
                     </td>
-                    <td className="p-6 body-md font-black text-on-surface">{req.total_amount.toLocaleString()}</td>
-                    <td className="p-6">
-                      <span className={`chip chip-pending font-black uppercase text-[10px]`}>{req.status}</span>
+                    <td style={{ padding: '0.875rem 1.25rem', fontWeight: 900, fontSize: '0.875rem' }}>{req.total_amount.toLocaleString()}</td>
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
+                      <span className={`chip ${getStatusChipClass(req.status)}`}>{req.status}</span>
                     </td>
-                    <td className="p-6">
+                    <td style={{ padding: '0.875rem 1.25rem' }}>
                       <Link 
                         to={`/request/${req.id}`}
-                        className="p-3 bg-surface-container-low hover:bg-primary hover:text-white rounded-full transition-all inline-flex items-center justify-center text-primary"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 28, height: 28, borderRadius: 'var(--radius-pill)',
+                          background: 'rgba(0,52,111,0.1)', color: 'var(--primary)',
+                          transition: 'all 0.15s', textDecoration: 'none'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary)'; e.currentTarget.style.color = '#fff' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,52,111,0.1)'; e.currentTarget.style.color = 'var(--primary)' }}
                       >
-                         <ArrowUpRight size={18} />
+                        <ArrowUpRight size={14} />
                       </Link>
                     </td>
                   </tr>
@@ -148,30 +178,45 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* Global Audit Log */}
-        <section className="space-y-8">
-          <h3 className="title-lg font-black flex items-center gap-3">
-            <Activity size={22} className="text-primary" />
+        {/* Live Telemetry (Stitch: dashed connector, tertiary timestamps) */}
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <h3 className="title-lg" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Activity size={20} style={{ color: 'var(--primary)' }} />
             Live Telemetry
           </h3>
           
-          <div className="surface-card space-y-8 relative before:absolute before:left-[27px] before:top-4 before:bottom-4 before:w-[1px] before:border-l before:border-dashed before:border-outline-variant">
-            {[
-              { time: 'Active', action: 'Ledger Isolated', user: currentCompany?.name, target: 'Tenant-OK' },
-              { time: 'System', action: 'Multi-Tenant Auth', user: 'Gateway', target: '200 OK' },
-              { time: 'Ready', action: 'Petty Cash Ready', user: 'Finance', target: 'Enabled' },
-            ].map((activity, i) => (
-              <div key={i} className="flex gap-6 relative group">
-                <div className="w-6 h-6 rounded-full bg-surface-container-highest border-2 border-primary shrink-0 z-10 group-hover:bg-primary transition-colors" />
-                <div className="space-y-1">
-                  <p className="label-sm text-tertiary-fixed font-black tracking-tighter uppercase">{activity.time}</p>
-                  <p className="body-md font-black">{activity.action}</p>
-                  <p className="label-sm text-on-surface-variant font-medium">
-                    <span className="font-bold text-on-surface">{activity.user}</span> • {activity.target}
-                  </p>
+          <div className="surface-card" style={{ position: 'relative', paddingLeft: '2.5rem' }}>
+            {/* Stitch: dashed connector line */}
+            <div style={{ 
+              position: 'absolute', left: 27, top: '1.5rem', bottom: '1.5rem', 
+              borderLeft: '2px dashed var(--outline-variant)', opacity: 0.4
+            }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {[
+                { time: 'Active', action: 'Ledger Isolated', user: currentCompany?.name, target: 'Tenant-OK' },
+                { time: 'System', action: 'Multi-Tenant Auth', user: 'Gateway', target: '200 OK' },
+                { time: 'Ready', action: 'Petty Cash Ready', user: 'Finance', target: 'Enabled' },
+              ].map((activity, i) => (
+                <div key={i} style={{ display: 'flex', gap: '1rem', position: 'relative' }}>
+                  {/* Stitch: active step circle with primary ring */}
+                  <div style={{ 
+                    width: 12, height: 12, borderRadius: '50%', 
+                    border: '2px solid var(--primary)', background: 'var(--surface-container-lowest)',
+                    flexShrink: 0, zIndex: 1, marginTop: 4
+                  }} />
+                  <div>
+                    {/* Stitch: tertiary color for timestamps */}
+                    <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>
+                      {activity.time}
+                    </p>
+                    <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '0.875rem' }}>{activity.action}</p>
+                    <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', color: 'var(--on-surface-variant)' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--on-surface)' }}>{activity.user}</span> • {activity.target}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       </div>

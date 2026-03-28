@@ -1,52 +1,102 @@
-@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ============================================================
+   UMLAB SaaS — "The Tectonic Ledger" Design System
+   Synced from Stitch DESIGN.md specification
+   ============================================================ */
 
 :root {
-  /* Colors */
-  --primary: #00346f;
-  --primary-container: #004a99;
-  --primary-gradient: linear-gradient(135deg, #00346f 0%, #004a99 100%);
-  --on-primary: #ffffff;
-  
-  --surface: #f8f9fb;
-  --surface-container-low: #f2f4f6;
-  --surface-container-lowest: #ffffff;
-  --surface-container-high: #e6e8ea;
-  --surface-container-highest: #e0e3e5;
-  
-  --on-surface: #191c1e;
-  --on-surface-variant: #424751;
-  
-  --secondary-container: #cbe7f5;
-  --on-secondary-container: #4e6874;
-  
-  --tertiary: #003d35;
-  --tertiary-fixed: #97f3e2;
-  --on-tertiary-fixed-variant: #005047;
-  
-  --error: #ba1a1a;
-  --error-container: #ffdad6;
-  --on-error-container: #93000a;
-  
-  --outline-variant: #c2c6d3;
-  --outline-variant-low: rgba(194, 198, 211, 0.15);
-  
-  --shadow-ambient: 0 20px 40px rgba(25, 28, 30, 0.06);
-  
-  /* Radii */
-  --radius-sm: 0.125rem;
-  --radius-full: 9999px;
-  
-  /* Fonts */
+  /* ── Brand Primaries (Stitch exact) ── */
+  --primary:              #00346f;
+  --primary-container:    #004a99;
+  --primary-fixed:        #d7e2ff;
+  --primary-fixed-dim:    #abc7ff;
+  --primary-gradient:     linear-gradient(135deg, #00346f 0%, #004a99 100%);
+  --on-primary:           #ffffff;
+  --on-primary-fixed:     #001b3f;
+  --on-primary-fixed-variant: #00458f;
+  --on-primary-container: #9bbdff;
+
+  /* ── Surfaces (Stitch tonal layer hierarchy) ── */
+  --surface:                    #f8f9fb;   /* Level 0: Foundation */
+  --surface-container-low:      #f2f4f6;   /* Level 1: Sectioning */
+  --surface-container:          #eceef0;
+  --surface-container-lowest:   #ffffff;   /* Level 2: Active Cards */
+  --surface-container-high:     #e6e8ea;
+  --surface-container-highest:  #e0e3e5;   /* Level 3: High Focus */
+  --surface-dim:                #d8dadc;
+  --surface-bright:             #f8f9fb;
+  --surface-tint:               #255dad;
+
+  /* ── Text ── */
+  --on-surface:           #191c1e;
+  --on-surface-variant:   #424751;
+  --on-background:        #191c1e;
+
+  /* ── Secondary (Pending / Info) ── */
+  --secondary:                  #48626e;
+  --secondary-container:        #cbe7f5;
+  --secondary-fixed:            #cbe7f5;
+  --secondary-fixed-dim:        #afcbd8;
+  --on-secondary:               #ffffff;
+  --on-secondary-container:     #4e6874;
+  --on-secondary-fixed:         #021f29;
+  --on-secondary-fixed-variant: #304a55;
+
+  /* ── Tertiary (Approved / Success) ── */
+  --tertiary:                   #003d35;
+  --tertiary-container:         #00564c;
+  --tertiary-fixed:             #97f3e2;
+  --tertiary-fixed-dim:         #7ad7c6;
+  --on-tertiary:                #ffffff;
+  --on-tertiary-fixed:          #00201b;
+  --on-tertiary-fixed-variant:  #005047;
+  --on-tertiary-container:      #70ccbc;
+
+  /* ── Error ── */
+  --error:                #ba1a1a;
+  --error-container:      #ffdad6;
+  --on-error:             #ffffff;
+  --on-error-container:   #93000a;
+
+  /* ── Outline ── */
+  --outline:              #737783;
+  --outline-variant:      #c2c6d3;
+
+  /* ── Inverse ── */
+  --inverse-surface:      #2d3133;
+  --inverse-on-surface:   #eff1f3;
+  --inverse-primary:      #abc7ff;
+
+  /* ── Shadows (Stitch: ultra-diffused ambient only) ── */
+  --shadow-ambient:       0 20px 40px rgba(25, 28, 30, 0.06);
+
+  /* ── Radii (Stitch exact) ── */
+  --radius-sm:   0.125rem;   /* DEFAULT structural */
+  --radius-lg:   0.25rem;
+  --radius-xl:   0.5rem;
+  --radius-full: 0.75rem;    /* chip/interactive radius */
+  --radius-pill: 9999px;     /* pill-shaped chips */
+
+  /* ── Fonts (Stitch exact: Public Sans + Inter) ── */
   --font-headline: 'Public Sans', sans-serif;
-  --font-body: 'Public Sans', sans-serif;
-  --font-label: 'Inter', sans-serif;
+  --font-body:     'Public Sans', sans-serif;
+  --font-label:    'Inter', sans-serif;
 }
 
-/* Reset & Base */
-* {
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -55,28 +105,86 @@ body {
   color: var(--on-surface);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Typography Scale */
-h1, h2, h3, .display-md {
+::selection {
+  background: var(--primary-fixed);
+  color: var(--primary);
+}
+
+/* ============================================================
+   Typography Scale (Stitch: Editorial Authority)
+   ============================================================ */
+
+h1, h2, h3, h4, h5, h6,
+.display-lg, .display-md, .display-sm {
   font-family: var(--font-headline);
   letter-spacing: -0.02em;
   font-weight: 700;
+  color: var(--on-surface);
+}
+
+.display-lg {
+  font-size: 3.5rem;
+  line-height: 1.1;
+  font-weight: 900;
 }
 
 .display-md {
   font-size: 2.75rem;
   line-height: 1.2;
+  font-weight: 900;
+}
+
+.display-sm {
+  font-size: 2rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.015em;
 }
 
 .title-lg {
+  font-family: var(--font-headline);
   font-size: 1.375rem;
   font-weight: 600;
 }
 
+.title-md {
+  font-family: var(--font-headline);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.title-sm {
+  font-family: var(--font-headline);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.body-lg {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
 .body-md {
+  font-family: var(--font-body);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.body-sm {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.label-lg {
+  font-family: var(--font-label);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .label-md {
@@ -91,11 +199,16 @@ h1, h2, h3, .display-md {
   font-weight: 500;
 }
 
-/* Utilities */
+/* ============================================================
+   Surface Cards (Stitch: tonal layering, NO line borders)
+   ============================================================ */
+
 .surface-card {
   background: var(--surface-container-lowest);
   border-radius: var(--radius-sm);
   padding: 1.5rem;
+  /* Stitch: "Ghost Border" at 15% opacity */
+  box-shadow: 0 0 0 1px rgba(194, 198, 211, 0.15);
 }
 
 .surface-section {
@@ -103,55 +216,122 @@ h1, h2, h3, .display-md {
   padding: 2rem;
 }
 
+/* ============================================================
+   Glass Panel (Stitch: 80% opacity + blur 12px)
+   ============================================================ */
+
 .glass {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
+.glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ============================================================
+   Gradient (Stitch: primary → primary_container at 135°)
+   ============================================================ */
+
 .gradient-fill {
   background: var(--primary-gradient);
 }
 
+/* ============================================================
+   Approval Chips (Stitch exact colors)
+   ============================================================ */
+
 .chip {
   padding: 4px 12px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-pill);
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   font-family: var(--font-label);
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
+/* Pending: secondary_container #cbe7f5 + on_secondary_container #4e6874 */
 .chip-pending {
   background: var(--secondary-container);
   color: var(--on-secondary-container);
 }
 
+/* Approved / Committed: tertiary_fixed #97f3e2 + on_tertiary_fixed_variant #005047 */
 .chip-approved {
   background: var(--tertiary-fixed);
   color: var(--on-tertiary-fixed-variant);
 }
 
+/* Rejected: error_container #ffdad6 + on_error_container #93000a */
 .chip-rejected {
   background: var(--error-container);
   color: var(--on-error-container);
 }
 
-/* The "No-Line" Rules */
-.no-border {
-  border: none !important;
+/* Draft: surface-container-highest */
+.chip-draft {
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
 }
 
+/* Director: primary-fixed #d7e2ff + primary #00346f */
+.chip-director {
+  background: var(--primary-fixed);
+  color: var(--primary);
+}
+
+/* PO Issued: primary bg */
+.chip-po {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* Payment Pending: secondary-fixed-dim */
+.chip-payment {
+  background: var(--secondary-fixed-dim);
+  color: var(--on-secondary-fixed-variant);
+}
+
+/* Paid / Disbursed: tertiary_fixed */
+.chip-paid {
+  background: var(--tertiary-fixed);
+  color: var(--on-tertiary-fixed-variant);
+}
+
+.chip-submitted {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+.chip-disbursed {
+  background: var(--tertiary-fixed);
+  color: var(--on-tertiary-fixed-variant);
+}
+
+/* ============================================================
+   Form Fields (Stitch: bottom-only stroke, minimalist)
+   ============================================================ */
+
 .bottom-stroke {
-  border-bottom: 1px solid var(--outline-variant);
+  border-bottom: 2px solid var(--outline-variant);
+  transition: border-color 0.2s ease;
 }
 
 .bottom-stroke:focus-within {
-  border-bottom: 2px solid var(--primary);
+  border-bottom-color: var(--primary);
 }
 
-/* Transitions */
+/* ============================================================
+   Hover / Lift (Stitch: surface-container-high on hover)
+   ============================================================ */
+
 .hover-lift {
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
@@ -159,3 +339,102 @@ h1, h2, h3, .display-md {
 .hover-lift:hover {
   background-color: var(--surface-container-high);
 }
+
+/* ============================================================
+   Status Trackers (Stitch: dashed connector lines)
+   ============================================================ */
+
+/* Connector uses dashed outline-variant */
+
+/* ============================================================
+   Transitions (Stitch: translate-x-1 on active)
+   ============================================================ */
+
+.nav-active-shift {
+  transform: translateX(4px);
+}
+
+/* ============================================================
+   Ghost Border & No-Line utilities
+   ============================================================ */
+
+.no-border {
+  border: none !important;
+}
+
+.ghost-ring {
+  box-shadow: 0 0 0 1px rgba(194, 198, 211, 0.15);
+}
+
+/* ============================================================
+   Ambient Shadow (the ONLY shadow allowed by Stitch)
+   ============================================================ */
+
+.shadow-ambient {
+  box-shadow: var(--shadow-ambient);
+}
+
+.shadow-3xl {
+  box-shadow: var(--shadow-ambient);
+}
+
+/* ============================================================
+   Indeterminate Progress (Stitch: liquid gradient fill)
+   ============================================================ */
+
+.progress-track {
+  background: var(--secondary-container);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: var(--primary-gradient);
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.5s ease;
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: var(--radius-pill);
+}
+
+/* ============================================================
+   Utility Classes (for inline Tailwind usage)
+   ============================================================ */
+
+.text-primary          { color: var(--primary) !important; }
+.text-on-surface       { color: var(--on-surface) !important; }
+.text-on-surface-variant { color: var(--on-surface-variant) !important; }
+.text-error            { color: var(--error) !important; }
+.text-tertiary         { color: var(--tertiary) !important; }
+.text-tertiary-fixed   { color: var(--tertiary-fixed) !important; }
+.text-outline          { color: var(--outline) !important; }
+
+.bg-primary            { background-color: var(--primary) !important; }
+.bg-surface            { background-color: var(--surface) !important; }
+.bg-surface-container-low     { background-color: var(--surface-container-low) !important; }
+.bg-surface-container-lowest  { background-color: var(--surface-container-lowest) !important; }
+.bg-surface-container-high    { background-color: var(--surface-container-high) !important; }
+.bg-surface-container-highest { background-color: var(--surface-container-highest) !important; }
+.bg-error-container    { background-color: var(--error-container) !important; }
+
+.border-primary        { border-color: var(--primary) !important; }
+.border-outline-variant     { border-color: var(--outline-variant) !important; }
+.border-outline-variant-low { border-color: rgba(194, 198, 211, 0.15) !important; }
+
+.on-tertiary-fixed-variant { color: var(--on-tertiary-fixed-variant) !important; }

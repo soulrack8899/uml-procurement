@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Settings, ShieldCheck, DollarSign, Database, AlertCircle, Save, Trash2, Clock, BellRing, Activity } from 'lucide-react'
 import { useCompany } from '../App'
 import { procurementApi } from '../services/api'
+
+/* ─────────────────────────────────────────────────────
+   AdminSettings — pixel-matched to Stitch code.html
+   "Global Procurement Controls" bento grid layout
+   ───────────────────────────────────────────────────── */
 
 const AdminSettings = () => {
   const { currentCompany } = useCompany()
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [threshold, setThreshold] = useState('')
+  const [pettyCashLimit, setPettyCashLimit] = useState('500.00')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -19,117 +24,348 @@ const AdminSettings = () => {
     try {
       const data = await procurementApi.getSettings(currentCompany.id)
       setSettings(data)
-      setThreshold(data.approval_threshold.toString())
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+      setThreshold(data.approval_threshold.toLocaleString('en', { minimumFractionDigits: 2 }))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
   }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      await procurementApi.updateSettings(currentCompany.id, parseFloat(threshold))
+      await procurementApi.updateSettings(currentCompany.id, parseFloat(threshold.replace(/,/g, '')))
       alert("Financial guardrails updated successfully.")
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      setSaving(false)
-    }
+    } catch (err) { alert(err.message) }
+    finally { setSaving(false) }
   }
 
-  if (loading) return <div className="p-20 text-center animate-pulse title-lg">Reading system policy...</div>
+  if (loading) return (
+    <div style={{ padding: '5rem', textAlign: 'center', fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '1.125rem' }} className="animate-pulse">
+      Reading system policy...
+    </div>
+  )
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12">
-      {/* Header */}
-      <section className="flex flex-col gap-2">
-        <p className="label-md text-primary font-black uppercase tracking-widest text-xs">Tenant Governance Context</p>
-        <h1 className="display-sm text-on-surface text-4xl font-black tracking-tight">{currentCompany?.name} | Config</h1>
-      </section>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+      {/* Breadcrumbs & Headline (Stitch exact) */}
+      <div style={{ marginBottom: '0.5rem' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)' }}>Governance</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>›</span>
+          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>Global Settings</span>
+        </nav>
+        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Global Procurement Controls</h1>
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--on-surface-variant)', marginTop: '0.5rem', maxWidth: '42rem' }}>
+          Configure financial guardrails, authorization workflows, and security audit protocols for the {currentCompany?.name} ecosystem.
+        </p>
+      </div>
 
-      <div className="space-y-8">
-        {/* Financial Policy */}
-        <section className="surface-card space-y-8 border-l-4 border-primary shadow-ambient">
-           <div className="flex items-center gap-4 border-b border-outline-variant-low pb-6">
-              <div className="w-12 h-12 rounded-sm bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
-                <DollarSign size={24} />
-              </div>
-              <div>
-                <h3 className="title-md font-black tracking-tight uppercase tracking-widest text-xs mb-1">Financial Guardrails</h3>
-                <p className="body-sm text-on-surface-variant font-medium">Configure authorization tiers for procurement asset acquisitions.</p>
-              </div>
-           </div>
+      {/* Bento Grid (Stitch: 7-col + 5-col) */}
+      <div style={{ display: 'grid', gridTemplateColumns: '7fr 5fr', gap: '1.5rem' }}>
+        {/* ── Financial Thresholds (Left Panel) ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: 'var(--surface-container-lowest)',
+            padding: '2rem',
+            borderRadius: 'var(--radius-sm)',
+            boxShadow: '0 0 0 1px rgba(194,198,211,0.05)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.875rem', color: 'var(--primary)' }}>🏛️</span>
+              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 700 }}>Financial Thresholds</h2>
+            </div>
+            <span className="chip chip-approved" style={{ padding: '0.375rem 0.75rem', fontSize: '0.625rem' }}>Active Policy</span>
+          </div>
 
-           <div className="space-y-6 max-w-md">
-             <div className="space-y-3">
-                <label className="label-sm text-on-surface-variant font-black uppercase tracking-widest">Director Approval Threshold (RM)</label>
-                <div className="flex gap-4">
-                  <input 
-                    type="number" 
-                    value={threshold}
-                    onChange={(e) => setThreshold(e.target.value)}
-                    className="flex-1 bg-surface-container-low p-4 rounded-sm border border-outline-variant-low label-md font-black focus:border-primary outline-none transition-all shadow-inner"
-                    placeholder="e.g. 5000"
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {/* Director Approval Limit */}
+            <div>
+              <label style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '1rem' }}>
+                Director Approval Limit (RM)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 0, bottom: '0.75rem', color: 'var(--primary)', fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 900 }}>RM</span>
+                <input
+                  type="text"
+                  value={threshold}
+                  onChange={(e) => setThreshold(e.target.value)}
+                  style={{
+                    width: '100%', paddingLeft: '3rem', paddingBottom: '0.5rem',
+                    background: 'transparent', border: 'none', borderBottom: '2px solid var(--outline-variant)',
+                    fontFamily: 'var(--font-headline)', fontSize: '1.875rem', fontWeight: 900,
+                    color: 'var(--on-surface)', outline: 'none', transition: 'border-color 0.2s'
+                  }}
+                  onFocus={e => e.target.style.borderBottomColor = 'var(--primary)'}
+                  onBlur={e => e.target.style.borderBottomColor = 'var(--outline-variant)'}
+                />
+              </div>
+              <p style={{ marginTop: '0.5rem', fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
+                Transactions exceeding this amount require multi-factor Director biometric verification.
+              </p>
+            </div>
+
+            {/* Petty Cash Daily Limit */}
+            <div>
+              <label style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '1rem' }}>
+                Petty Cash Daily Limit
+              </label>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
+                <div style={{ flex: 1, position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 0, bottom: '0.5rem', color: 'var(--outline)', fontFamily: 'var(--font-headline)', fontSize: '1.125rem' }}>RM</span>
+                  <input
+                    type="text"
+                    value={pettyCashLimit}
+                    onChange={(e) => setPettyCashLimit(e.target.value)}
+                    style={{
+                      width: '100%', paddingLeft: '2.5rem', paddingBottom: '0.5rem',
+                      background: 'transparent', border: 'none', borderBottom: '2px solid var(--outline-variant)',
+                      fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 700,
+                      color: 'var(--on-surface)', outline: 'none'
+                    }}
                   />
-                  <button 
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-8 py-4 gradient-fill text-white label-sm font-black uppercase tracking-widest rounded-sm shadow-lg hover:scale-[1.05] transition-all disabled:opacity-50"
-                  >
-                    {saving ? 'Syncing...' : 'Save Policy'}
-                  </button>
                 </div>
-                <p className="label-sm text-on-surface-variant flex items-center gap-2 mt-2">
-                  <AlertCircle size={14} className="text-primary" />
-                  Requests exceeding this amount will trigger a PENDING_DIRECTOR gate automatically.
-                </p>
-             </div>
-           </div>
-        </section>
+                <div style={{ background: 'var(--surface-container-low)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', boxShadow: '0 0 0 1px rgba(194,198,211,0.1)' }}>
+                  <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', display: 'block' }}>Auto-Replenish</span>
+                  <span style={{ fontFamily: 'var(--font-headline)', fontSize: '0.875rem', fontWeight: 700, color: 'var(--primary)' }}>Enabled</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        {/* System Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-           <section className="surface-card space-y-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <Clock size={20} className="text-secondary-fixed" />
-                <h3 className="label-md font-black uppercase tracking-widest text-on-surface">Data Retention</h3>
-              </div>
-              <div className="space-y-2">
-                 <p className="label-sm font-bold text-on-surface">Standard Period: 365 Days</p>
-                 <p className="body-sm text-on-surface-variant leading-relaxed">Compliance with Sarawak Regional Audit Regulation SWK-992. Automated clearing of expired PO payloads.</p>
-              </div>
-              <button disabled className="label-sm text-primary font-bold hover:underline opacity-50 cursor-not-allowed uppercase tracking-wider">Configure Storage Tiers</button>
-           </section>
+          {/* Update Guardrails CTA */}
+          <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid rgba(194,198,211,0.15)', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="gradient-fill"
+              style={{
+                color: 'var(--on-primary)', padding: '0.75rem 2rem', borderRadius: 'var(--radius-sm)',
+                fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '0.875rem',
+                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                transition: 'opacity 0.15s', opacity: saving ? 0.5 : 1
+              }}
+            >
+              <span>{saving ? 'Syncing...' : 'Update Guardrails'}</span>
+              <span>🛡️</span>
+            </button>
+          </div>
+        </motion.section>
 
-           <section className="surface-card space-y-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <BellRing size={20} className="text-tertiary-fixed-variant" />
-                <h3 className="label-md font-black uppercase tracking-widest text-on-surface">Global Notifiers</h3>
-              </div>
-              <div className="space-y-2">
-                 <p className="label-sm font-bold text-on-surface">Active Channels: Email, Telegram</p>
-                 <p className="body-sm text-on-surface-variant leading-relaxed">Real-time telemetry for all threshold violations and final disbursements.</p>
-              </div>
-              <button disabled className="label-sm text-primary font-bold hover:underline opacity-50 cursor-not-allowed uppercase tracking-wider">Modify Webhooks</button>
-           </section>
+        {/* ── Right Column (Access Control + Emergency) ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Access Control */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            style={{
+              background: 'var(--surface-container-high)',
+              padding: '1.5rem',
+              borderRadius: 'var(--radius-sm)', flex: 1
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <span style={{ color: 'var(--primary)' }}>🔒</span>
+              <h3 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.125rem', fontWeight: 700 }}>Access Control</h3>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {[
+                { icon: '👤', label: 'Lab Personnel', perm: 'View Only', active: false },
+                { icon: '💳', label: 'Procurement Officer', perm: 'Full Create', active: false },
+                { icon: '🛡️', label: 'Director', perm: 'Admin Override', active: true },
+              ].map((role) => (
+                <div
+                  key={role.label}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.75rem', background: 'var(--surface-container-lowest)',
+                    borderRadius: 'var(--radius-sm)',
+                    boxShadow: role.active ? '0 0 0 2px rgba(0,52,111,0.2)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 'var(--radius-pill)',
+                      background: role.active ? 'var(--primary)' : 'rgba(0,52,111,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.875rem', color: role.active ? 'var(--on-primary)' : 'var(--primary)'
+                    }}>{role.icon}</div>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600 }}>{role.label}</span>
+                  </div>
+                  <span style={{
+                    fontFamily: 'var(--font-label)', fontSize: '0.625rem',
+                    color: role.active ? 'var(--primary)' : 'var(--outline)',
+                    fontWeight: role.active ? 700 : 400
+                  }}>{role.perm}</span>
+                </div>
+              ))}
+            </div>
+
+            <button style={{
+              width: '100%', marginTop: '1.5rem', color: 'var(--primary)',
+              fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700,
+              padding: '0.5rem', border: '1px solid rgba(0,52,111,0.2)',
+              background: 'transparent', borderRadius: 'var(--radius-sm)',
+              cursor: 'pointer', transition: 'background 0.15s'
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,52,111,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >MANAGE PERMISSIONS</button>
+          </motion.section>
+
+          {/* Emergency Lockdown */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            style={{
+              background: 'var(--surface-container-lowest)',
+              padding: '1.5rem', borderRadius: 'var(--radius-sm)',
+              boxShadow: '0 0 0 1px rgba(194,198,211,0.2)',
+              display: 'flex', alignItems: 'center', gap: '1rem'
+            }}
+          >
+            <div style={{
+              width: 48, height: 48, background: 'var(--error-container)',
+              color: 'var(--error)', borderRadius: 'var(--radius-sm)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.875rem'
+            }}>⚠️</div>
+            <div>
+              <p style={{ fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '0.875rem' }}>Emergency Lockdown</p>
+              <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', color: 'var(--outline)' }}>Instantly freeze all procurement channels</p>
+            </div>
+          </motion.section>
+        </div>
+      </div>
+
+      {/* ── Audit & Transparency Log (Full Width) ── */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        style={{
+          background: 'rgba(224,227,229,0.3)',
+          padding: '2rem', borderRadius: 'var(--radius-sm)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '2rem' }}>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 700 }}>Audit & Transparency Log</h2>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)', marginTop: '0.25rem' }}>Configure historical data retention and automated reporting frequencies.</p>
+          </div>
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            color: 'var(--primary)', fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700,
+            background: 'none', border: 'none', cursor: 'pointer'
+          }}>
+            📥 EXPORT LOGS (.TSV)
+          </button>
         </div>
 
-        {/* Destructive Zone */}
-        <section className="surface-card space-y-6 border border-error/20 bg-error/5 opacity-50 grayscale hover:grayscale-0 transition-all shadow-sm">
-           <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-sm bg-error/10 flex items-center justify-center text-error">
-                <Trash2 size={20} />
+        {/* 3-col config (Stitch exact) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Retention Period</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 900 }}>7 Years</span>
+              <span style={{ color: 'var(--primary)', cursor: 'pointer' }}>✏️</span>
+            </div>
+            <p style={{ fontSize: '0.625rem', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>Compliant with Sarawak State Finance Regulations.</p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notification Frequency</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--primary)' }} />
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 700 }}>Real-time</span>
               </div>
-              <div>
-                <h3 className="label-md font-black text-error uppercase tracking-widest">Enterprise Purge</h3>
-                <p className="body-sm text-on-surface-variant">Irreversibly delete this tenant environment and all associated ledger records.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.3 }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', border: '1px solid var(--outline)' }} />
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>Batch Daily</span>
               </div>
-           </div>
-           <button disabled className="w-full py-3 bg-error/10 text-error label-sm font-black uppercase tracking-widest rounded-sm cursor-not-allowed">Protocol Restricted</button>
-        </section>
-      </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Security Level</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--tertiary)' }}>
+              <span>✅</span>
+              <span style={{ fontFamily: 'var(--font-headline)', fontSize: '1.125rem', fontWeight: 700 }}>End-to-End Encrypted</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Audit Trail Table (Stitch exact: surface-container-highest) */}
+        <div style={{
+          marginTop: '2.5rem', background: 'var(--surface-container-highest)',
+          padding: '1rem', borderRadius: 'var(--radius-sm)',
+          boxShadow: '0 0 0 1px rgba(194,198,211,0.1)'
+        }}>
+          <table style={{ width: '100%', textAlign: 'left', fontFamily: 'var(--font-label)' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(194,198,211,0.2)' }}>
+                {['Timestamp', 'Actor', 'Action', 'Status'].map(h => (
+                  <th key={h} style={{ paddingBottom: '0.75rem', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Status' ? 'right' : 'left' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid rgba(194,198,211,0.1)' }}>
+                <td style={{ padding: '0.75rem 0', fontSize: '0.75rem', color: 'var(--tertiary)', fontWeight: 500 }}>12 Oct 2023, 14:32:01</td>
+                <td style={{ padding: '0.75rem 0', fontSize: '0.75rem', fontWeight: 600 }}>Director_Admin</td>
+                <td style={{ padding: '0.75rem 0', fontSize: '0.75rem' }}>Modified Approval Threshold (RM 5k → RM 3k)</td>
+                <td style={{ padding: '0.75rem 0', textAlign: 'right' }}>
+                  <span className="chip chip-approved" style={{ fontSize: '0.5625rem' }}>COMMITTED</span>
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: '0.75rem 0', fontSize: '0.75rem', color: 'var(--tertiary)', fontWeight: 500 }}>12 Oct 2023, 10:15:44</td>
+                <td style={{ padding: '0.75rem 0', fontSize: '0.75rem', fontWeight: 600 }}>System_Kernel</td>
+                <td style={{ padding: '0.75rem 0', fontSize: '0.75rem' }}>Automated Petty Cash Replenishment Triggered</td>
+                <td style={{ padding: '0.75rem 0', textAlign: 'right' }}>
+                  <span className="chip chip-pending" style={{ fontSize: '0.5625rem' }}>QUEUED</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </motion.section>
+
+      {/* ── Multi-Entity Oversight Banner (Stitch exact) ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        style={{
+          background: 'var(--primary-container)',
+          padding: '2.5rem',
+          borderRadius: 'var(--radius-sm)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          overflow: 'hidden', position: 'relative'
+        }}
+      >
+        <div style={{ position: 'absolute', right: 0, top: 0, opacity: 0.1, transform: 'translateX(25%) translateY(-25%)', fontSize: '12rem' }}>🏢</div>
+        <div style={{ zIndex: 10 }}>
+          <h4 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 900, color: '#fff' }}>Multi-Entity Oversight</h4>
+          <p style={{ maxWidth: '28rem', marginTop: '0.5rem', color: 'rgba(215,226,255,0.8)' }}>
+            You are currently managing <span style={{ color: '#fff', fontWeight: 700 }}>{currentCompany?.name}</span>. Switch to <span style={{ color: '#fff', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: '4px', cursor: 'pointer' }}>Alfa Mount</span> to manage secondary procurement clusters.
+          </p>
+        </div>
+        <button style={{
+          zIndex: 10, background: '#fff', color: 'var(--primary)',
+          fontFamily: 'var(--font-headline)', fontWeight: 700,
+          padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-sm)',
+          border: 'none', cursor: 'pointer', transition: 'background 0.15s'
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-fixed)'}
+          onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+        >Switch Entity</button>
+      </motion.div>
     </div>
   )
 }

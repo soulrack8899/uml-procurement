@@ -1,9 +1,13 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Globe, Plus, CheckCircle, ArrowRight, Zap, Shield, Database } from 'lucide-react'
+import { Globe, CheckCircle, ArrowRight, Zap, Shield, Database } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { procurementApi } from '../services/api'
 import { useCompany } from '../App'
+
+/* ─────────────────────────────────────────────────────
+   TenantOnboarding — Stitch-aligned
+   ───────────────────────────────────────────────────── */
 
 const TenantOnboarding = () => {
   const navigate = useNavigate()
@@ -17,17 +21,11 @@ const TenantOnboarding = () => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const company = await procurementApi.createCompany({
-        name: formData.name,
-        domain: formData.domain
-      })
+      const company = await procurementApi.createCompany({ name: formData.name, domain: formData.domain })
       setNewCompany(company)
       setSuccess(true)
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      setSubmitting(false)
-    }
+    } catch (err) { alert(err.message) }
+    finally { setSubmitting(false) }
   }
 
   const handleEnterTenant = () => {
@@ -35,107 +33,138 @@ const TenantOnboarding = () => {
     navigate('/')
   }
 
+  const S = {
+    label: { fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '1rem' },
+    input: { width: '100%', paddingBottom: '0.5rem', background: 'transparent', border: 'none', borderBottom: '2px solid var(--outline-variant)', fontFamily: 'var(--font-headline)', fontSize: '1.125rem', fontWeight: 700, color: 'var(--on-surface)', outline: 'none', transition: 'border-color 0.2s' },
+    focus: (e) => e.target.style.borderBottomColor = 'var(--primary)',
+    blur: (e) => e.target.style.borderBottomColor = 'var(--outline-variant)'
+  }
+
   return (
-    <div className="max-w-4xl mx-auto py-12">
+    <div style={{ maxWidth: '48rem', margin: '0 auto', padding: '3rem 0' }}>
       <AnimatePresence mode="wait">
         {!success ? (
-          <motion.div 
-            key="form"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="space-y-12"
+          <motion.div key="form" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}
           >
             {/* Header */}
-            <section className="flex flex-col gap-3 text-center mb-12">
-              <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: 'var(--radius-pill)',
+                background: 'rgba(0,52,111,0.1)', color: 'var(--primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 1.5rem'
+              }}>
                 <Globe size={32} />
               </div>
-              <h1 className="display-sm text-on-surface text-5xl font-black tracking-tighter">Initialize Enterprise Tenant</h1>
-              <p className="body-lg text-on-surface-variant max-w-xl mx-auto">
+              <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+                Initialize Enterprise Tenant
+              </h1>
+              <p style={{ fontFamily: 'var(--font-body)', color: 'var(--on-surface-variant)', maxWidth: '32rem', margin: '0 auto', lineHeight: 1.5 }}>
                 Provision a new secure environment within the UMLAB ecosystem. Each tenant operates on a strictly isolated ledger infrastructure.
               </p>
-            </section>
+            </div>
 
-            {/* Form */}
-            <div className="surface-card shadow-3xl border-t-8 border-primary space-y-12 p-16">
-               <form onSubmit={handleSubmit} className="space-y-10">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                     <div className="space-y-4">
-                        <label className="label-sm text-on-surface-variant font-black uppercase tracking-widest text-xs">Entity Legal Name</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={formData.name}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          className="w-full bg-surface-container-low p-5 rounded-sm border border-outline-variant-low label-md font-black focus:border-primary outline-none transition-all shadow-inner"
-                          placeholder="e.g. Alfa Mount Solutions"
-                        />
-                     </div>
-                     <div className="space-y-4">
-                        <label className="label-sm text-on-surface-variant font-black uppercase tracking-widest text-xs">Primary Operations Domain</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={formData.domain}
-                          onChange={(e) => setFormData({...formData, domain: e.target.value})}
-                          className="w-full bg-surface-container-low p-5 rounded-sm border border-outline-variant-low label-md font-black focus:border-primary outline-none transition-all shadow-inner"
-                          placeholder="e.g. alfamount.my"
-                        />
-                     </div>
+            {/* Form Card */}
+            <div style={{
+              background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)',
+              boxShadow: '0 20px 40px rgba(25,28,30,0.06)', padding: '3rem'
+            }}>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                  <div>
+                    <label style={S.label}>Entity Legal Name</label>
+                    <input type="text" required value={formData.name}
+                      onChange={e => setFormData({...formData, name: e.target.value})}
+                      placeholder="e.g. Alfa Mount Solutions"
+                      style={S.input} onFocus={S.focus} onBlur={S.blur} />
                   </div>
-
-                  <div className="bg-surface-container-lowest p-8 rounded-sm space-y-6 border border-outline-variant-low">
-                     <h3 className="label-sm font-black uppercase tracking-widest flex items-center gap-3">
-                        <Shield size={16} className="text-primary" />
-                        Infrastructure Protocols Engaged
-                     </h3>
-                     <ul className="space-y-3">
-                        <li className="flex items-start gap-4 text-on-surface-variant body-sm">
-                           <Zap size={14} className="mt-1 text-tertiary-fixed" />
-                           <p><span className="font-bold text-on-surface">Dynamic Financial Guardrails:</span> RM 5,000 baseline threshold will be seeded in the new global context.</p>
-                        </li>
-                        <li className="flex items-start gap-4 text-on-surface-variant body-sm">
-                           <Database size={14} className="mt-1 text-primary-fixed" />
-                           <p><span className="font-bold text-on-surface">Ledger Isolation:</span> Unique UUID generation for all future procurement and petty cash records.</p>
-                        </li>
-                     </ul>
+                  <div>
+                    <label style={S.label}>Primary Operations Domain</label>
+                    <input type="text" required value={formData.domain}
+                      onChange={e => setFormData({...formData, domain: e.target.value})}
+                      placeholder="e.g. alfamount.my"
+                      style={S.input} onFocus={S.focus} onBlur={S.blur} />
                   </div>
+                </div>
 
-                  <button 
-                    type="submit" 
-                    disabled={submitting}
-                    className="w-full py-6 gradient-fill text-white label-md font-black uppercase tracking-widest rounded-sm shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
-                  >
-                    {submitting ? 'Provisioning Environment...' : 'Authorize Tenant Creation'}
-                  </button>
-               </form>
+                {/* Protocol Info (Stitch: surface-container-low section) */}
+                <div style={{
+                  background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)',
+                  padding: '1.5rem'
+                }}>
+                  <h3 style={{
+                    fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem'
+                  }}>
+                    <Shield size={14} style={{ color: 'var(--primary)' }} /> Infrastructure Protocols Engaged
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                      <Zap size={14} style={{ marginTop: 2, color: 'var(--tertiary)', flexShrink: 0 }} />
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--on-surface-variant)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--on-surface)' }}>Dynamic Financial Guardrails:</span> RM 5,000 baseline threshold will be seeded in the new global context.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                      <Database size={14} style={{ marginTop: 2, color: 'var(--primary)', flexShrink: 0 }} />
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--on-surface-variant)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--on-surface)' }}>Ledger Isolation:</span> Unique UUID generation for all future procurement and petty cash records.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="submit" disabled={submitting} className="gradient-fill" style={{
+                  width: '100%', padding: '1rem',
+                  color: 'var(--on-primary)', fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '0.875rem',
+                  borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+                  transition: 'opacity 0.15s', opacity: submitting ? 0.5 : 1
+                }}>
+                  {submitting ? 'Provisioning Environment...' : 'Authorize Tenant Creation'}
+                </button>
+              </form>
             </div>
           </motion.div>
         ) : (
-          <motion.div 
-            key="success"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="surface-card text-center p-20 shadow-3xl space-y-10 border-t-8 border-tertiary"
+          <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+            style={{
+              background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)',
+              boxShadow: '0 20px 40px rgba(25,28,30,0.06)',
+              textAlign: 'center', padding: '4rem 3rem'
+            }}
           >
-             <div className="w-24 h-24 bg-tertiary/10 text-tertiary rounded-full flex items-center justify-center mx-auto mb-8 shadow-ambient">
-                <CheckCircle size={48} />
-             </div>
-             <div className="space-y-4">
-                <h1 className="display-sm text-on-surface text-5xl font-black">Provisioning Complete</h1>
-                <p className="title-md text-on-surface-variant font-bold uppercase tracking-widest">Context: {newCompany?.name}</p>
-             </div>
-             <p className="body-lg text-on-surface-variant max-w-sm mx-auto">
-                The secure multi-tenant environment is live and the ledger is ready for initialization.
-             </p>
-             <button 
-              onClick={handleEnterTenant}
-              className="px-12 py-5 bg-on-surface text-surface label-md font-black uppercase tracking-widest rounded-sm hover-lift flex items-center gap-4 mx-auto"
-             >
-                Enter Execution Context
-                <ArrowRight size={20} />
-             </button>
+            <div style={{
+              width: 96, height: 96, borderRadius: 'var(--radius-pill)',
+              background: 'rgba(0,61,53,0.1)', color: 'var(--tertiary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 2rem'
+            }}>
+              <CheckCircle size={48} />
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
+              Provisioning Complete
+            </h1>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.5rem' }}>
+              Context: {newCompany?.name}
+            </p>
+            <p style={{ fontFamily: 'var(--font-body)', color: 'var(--on-surface-variant)', maxWidth: '24rem', margin: '0 auto 2rem', lineHeight: 1.5 }}>
+              The secure multi-tenant environment is live and the ledger is ready for initialization.
+            </p>
+            <button onClick={handleEnterTenant} style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.75rem',
+              padding: '0.875rem 2rem', background: 'var(--on-surface)', color: 'var(--surface)',
+              fontFamily: 'var(--font-label)', fontWeight: 700, fontSize: '0.75rem',
+              textTransform: 'uppercase', letterSpacing: '0.04em',
+              borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+              transition: 'opacity 0.15s'
+            }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              Enter Execution Context <ArrowRight size={18} />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

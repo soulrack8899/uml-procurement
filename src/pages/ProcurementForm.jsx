@@ -1,8 +1,13 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Trash2, Send, Save, ArrowLeft, ClipboardList, TrendingUp } from 'lucide-react'
+import { Plus, Trash2, Send, Save, ArrowLeft, Upload } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { procurementApi } from '../services/api'
+
+/* ─────────────────────────────────────────────────────
+   ProcurementForm — synced with Stitch "Procurement Request Form" screen
+   Bottom-stroke inputs, tonal surface sections, no solid borders
+   ───────────────────────────────────────────────────── */
 
 const ProcurementForm = () => {
   const navigate = useNavigate()
@@ -19,9 +24,7 @@ const ProcurementForm = () => {
     setItems(newItems)
   }
 
-  const calculateTotal = () => {
-    return items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0)
-  }
+  const calculateTotal = () => items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0)
 
   const handleSubmit = async () => {
     setSubmitting(true)
@@ -39,11 +42,8 @@ const ProcurementForm = () => {
           total_price: i.quantity * i.unitPrice
         }))
       }
-      
       const res = await procurementApi.createRequest(requestData)
-      // Auto-transition to PENDING_MANAGER
       await procurementApi.transitionStatus(res.id, 'PENDING_MANAGER', 'System', 'REQUESTER')
-      
       navigate(`/request/${res.id}`)
     } catch (err) {
       alert(err.message)
@@ -52,151 +52,194 @@ const ProcurementForm = () => {
     }
   }
 
+  const S = { // shorthand Stitch styling tokens
+    label: { fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '1rem' },
+    input: { width: '100%', paddingBottom: '0.5rem', background: 'transparent', border: 'none', borderBottom: '2px solid var(--outline-variant)', fontFamily: 'var(--font-headline)', fontSize: '1rem', fontWeight: 700, color: 'var(--on-surface)', outline: 'none', transition: 'border-color 0.2s' },
+    focus: (e) => e.target.style.borderBottomColor = 'var(--primary)',
+    blur: (e) => e.target.style.borderBottomColor = 'var(--outline-variant)'
+  }
+
   return (
-    <div className="max-w-5xl mx-auto space-y-12 pb-24">
-      {/* Header */}
-      <section className="flex flex-col gap-2">
-        <div className="flex items-center gap-4 text-primary mb-2">
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+    <div style={{ maxWidth: '64rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem', paddingBottom: '6rem' }}>
+      {/* Header (Stitch: breadcrumb + back) */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+          <button onClick={() => navigate('/')} style={{ padding: '0.5rem', borderRadius: 'var(--radius-pill)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', transition: 'background 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-high)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
             <ArrowLeft size={20} />
           </button>
-          <p className="label-md font-black uppercase tracking-widest">Initialization Protocol 2026</p>
+          <div>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>UMLAB Procurement</p>
+            <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', color: 'var(--outline)' }}>PR-2026-SRW-{String(Date.now()).slice(-3)}</span>
+          </div>
         </div>
-        <h1 className="display-sm text-on-surface text-4xl font-black tracking-tight">New Procurement Asset Request</h1>
-      </section>
+        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>New Request</h1>
+      </div>
 
-      {/* Form Body */}
-      <div className="surface-card space-y-12 shadow-ambient border-t-4 border-primary">
-        {/* Vendor Section */}
-        <section className="space-y-8 p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-sm bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-              <ClipboardList size={24} />
-            </div>
-            <h3 className="title-lg font-black tracking-tight">1. Strategic Vendor Verification</h3>
+      {/* Main form card (Stitch: surface-container-lowest, ghost-ring) */}
+      <div style={{ background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)', boxShadow: '0 0 0 1px rgba(194,198,211,0.15)', padding: '2rem' }}>
+        {/* Item Information */}
+        <div style={{ marginBottom: '2.5rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.375rem', fontWeight: 700, marginBottom: '0.5rem' }}>Item Information</h2>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--on-surface-variant)' }}>Provide specific details regarding the laboratory supplies or equipment required.</p>
+        </div>
+
+        {/* Vendor fields (Stitch: bottom-stroke only) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+          <div>
+            <label style={S.label}>Vendor Name</label>
+            <input type="text" placeholder="e.g. Sarawak Tech Solutions" value={vendor.name}
+              onChange={e => setVendor({...vendor, name: e.target.value})}
+              style={S.input} onFocus={S.focus} onBlur={S.blur} />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-            <div className="flex flex-col gap-3">
-              <label className="label-sm text-on-surface-variant font-black uppercase tracking-wider">Vendor Entity Name</label>
-              <div className="bottom-stroke py-3">
-                <input 
-                  type="text" 
-                  placeholder="e.g. Sarawak Tech Solutions"
-                  value={vendor.name}
-                  onChange={(e) => setVendor({...vendor, name: e.target.value})}
-                  className="w-full bg-transparent border-none outline-none body-md font-black text-primary text-lg"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <label className="label-sm text-on-surface-variant font-black uppercase tracking-wider">Unique Vendor ID</label>
-              <div className="bottom-stroke py-3">
-                <input 
-                  type="text" 
-                  placeholder="STS-99XX-SWK"
-                  value={vendor.id}
-                  onChange={(e) => setVendor({...vendor, id: e.target.value})}
-                  className="w-full bg-transparent border-none outline-none body-md font-black text-primary text-lg"
-                />
-              </div>
-            </div>
+          <div>
+            <label style={S.label}>Vendor ID</label>
+            <input type="text" placeholder="STS-99XX-SWK" value={vendor.id}
+              onChange={e => setVendor({...vendor, id: e.target.value})}
+              style={S.input} onFocus={S.focus} onBlur={S.blur} />
           </div>
-        </section>
+        </div>
 
-        {/* Requirements Section */}
-        <section className="space-y-8 pt-8 border-t border-outline-variant-low p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-sm bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-                <Plus size={24} />
-              </div>
-              <h3 className="title-lg font-black tracking-tight">2. Line Item Configuration</h3>
-            </div>
-            <button 
-              onClick={addItem}
-              className="label-md text-primary font-black uppercase tracking-widest flex items-center gap-2 hover:bg-surface-container-low px-4 py-2 rounded-sm transition-all"
-            >
-              Add New Record
-              <TrendingUp size={16} />
+        {/* Line Items */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+            <label style={{ ...S.label, marginBottom: 0 }}>Line Items</label>
+            <button onClick={addItem} style={{
+              fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700,
+              color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: '0.25rem'
+            }}>
+              <Plus size={14} /> Add Item
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             {items.map((item, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end p-8 bg-surface-container-low rounded-sm hover:shadow-ambient transition-all group"
+                style={{
+                  display: 'grid', gridTemplateColumns: '5fr 2fr 2fr 2fr auto',
+                  gap: '1rem', alignItems: 'end', padding: '1.25rem',
+                  background: i % 2 === 0 ? 'var(--surface-container-low)' : 'transparent',
+                  borderRadius: 'var(--radius-sm)', transition: 'background 0.15s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-high)'}
+                onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--surface-container-low)' : 'transparent'}
               >
-                <div className="md:col-span-5 flex flex-col gap-2">
-                   <label className="label-sm text-on-surface-variant font-bold uppercase">Asset Description</label>
-                   <input 
-                    type="text" 
-                    value={item.description}
-                    onChange={(e) => handleItemChange(i, 'description', e.target.value)}
-                    className="w-full bg-white p-3 rounded-sm border border-outline-variant-low label-md font-bold focus:border-primary outline-none transition-all"
-                  />
+                <div>
+                  <label style={{ ...S.label, fontSize: '0.5625rem' }}>Description</label>
+                  <input type="text" value={item.description}
+                    onChange={e => handleItemChange(i, 'description', e.target.value)}
+                    style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
                 </div>
-                <div className="md:col-span-2 flex flex-col gap-2">
-                   <label className="label-sm text-on-surface-variant font-bold uppercase">Qty</label>
-                   <input 
-                    type="number" 
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(i, 'quantity', parseInt(e.target.value))}
-                    className="w-full bg-white p-3 rounded-sm border border-outline-variant-low label-md font-bold text-center"
-                  />
+                <div>
+                  <label style={{ ...S.label, fontSize: '0.5625rem' }}>Qty</label>
+                  <input type="number" value={item.quantity}
+                    onChange={e => handleItemChange(i, 'quantity', parseInt(e.target.value) || 0)}
+                    style={{ ...S.input, fontSize: '0.875rem', textAlign: 'center' }} onFocus={S.focus} onBlur={S.blur} />
                 </div>
-                <div className="md:col-span-2 flex flex-col gap-2">
-                   <label className="label-sm text-on-surface-variant font-bold uppercase">Rate (RM)</label>
-                   <input 
-                    type="number" 
-                    value={item.unitPrice}
-                    onChange={(e) => handleItemChange(i, 'unitPrice', parseFloat(e.target.value))}
-                    className="w-full bg-white p-3 rounded-sm border border-outline-variant-low label-md font-bold text-right"
-                  />
+                <div>
+                  <label style={{ ...S.label, fontSize: '0.5625rem' }}>Rate (RM)</label>
+                  <input type="number" value={item.unitPrice}
+                    onChange={e => handleItemChange(i, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    style={{ ...S.input, fontSize: '0.875rem', textAlign: 'right' }} onFocus={S.focus} onBlur={S.blur} />
                 </div>
-                <div className="md:col-span-2 text-right">
-                    <p className="label-sm text-on-surface-variant font-bold uppercase mb-3">Total</p>
-                    <p className="title-md font-black text-primary">{(item.quantity * item.unitPrice).toLocaleString()}</p>
+                <div style={{ textAlign: 'right' }}>
+                  <label style={{ ...S.label, fontSize: '0.5625rem' }}>Total</label>
+                  <p style={{ fontFamily: 'var(--font-headline)', fontWeight: 900, color: 'var(--primary)', fontSize: '0.875rem' }}>
+                    {(item.quantity * item.unitPrice).toLocaleString()}
+                  </p>
                 </div>
-                <div className="md:col-span-1 text-center">
-                   <button 
-                    onClick={() => removeItem(i)}
-                    className="p-3 text-on-surface-variant hover:text-error hover:bg-error-container rounded-sm transition-all"
-                   >
-                    <Trash2 size={18} />
-                   </button>
-                </div>
+                <button onClick={() => removeItem(i)} style={{
+                  padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: 'none',
+                  background: 'transparent', cursor: 'pointer', color: 'var(--on-surface-variant)',
+                  transition: 'all 0.15s'
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--error)'; e.currentTarget.style.background = 'var(--error-container)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--on-surface-variant)'; e.currentTarget.style.background = 'transparent' }}
+                >
+                  <Trash2 size={16} />
+                </button>
               </motion.div>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* Totals Section */}
-        <section className="flex flex-col items-end gap-2 pt-12 p-4">
-          <div className="pt-6 border-t-2 border-primary w-full max-w-sm text-right">
-            <p className="label-md text-primary font-black uppercase tracking-widest mb-2">Aggregated Total RM</p>
-            <p className="display-md text-primary text-6xl font-black">{calculateTotal().toLocaleString()}</p>
-          </div>
-        </section>
-      </div>
-
-      {/* Floating Action Bar */}
-      <div className="fixed bottom-12 right-12 flex gap-4 z-50">
-        <button className="flex items-center gap-3 px-10 py-5 bg-white border border-outline-variant-low text-on-surface-variant label-md font-black uppercase tracking-widest rounded-sm shadow-xl hover:bg-surface-container-low transition-all">
-          <Save size={18} />
-          Hold in Draft
-        </button>
-        <button 
-          onClick={handleSubmit}
-          disabled={submitting}
-          className={`flex items-center gap-3 px-10 py-5 gradient-fill text-white label-md font-black uppercase tracking-widest rounded-sm shadow-xl transition-all ${submitting ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}
+        {/* Attachment Zone */}
+        <div style={{
+          border: '2px dashed var(--outline-variant)', borderRadius: 'var(--radius-sm)',
+          padding: '2rem', textAlign: 'center', cursor: 'pointer', transition: 'border-color 0.15s'
+        }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--outline-variant)'}
         >
-          <Send size={18} />
-          {submitting ? 'Authenticating...' : 'Submit to Ledger'}
-        </button>
+          <Upload size={24} style={{ margin: '0 auto 0.5rem', color: 'var(--outline)' }} />
+          <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 600 }}>Click to upload or drag and drop</p>
+          <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', color: 'var(--outline)' }}>PDF, JPG, or PNG (Max 10MB)</p>
+        </div>
+
+        {/* Procurement Guidelines */}
+        <div style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-sm)', marginTop: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <span>ℹ️</span>
+            <h3 style={{ fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '0.875rem' }}>Procurement Guidelines</h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {[
+              'Ensure all quotes include shipping costs to the Sarawak Lab facility.',
+              'Requests exceeding RM 5,000 require three comparative vendor quotes.',
+              'Specify if "Urgent Fulfillment" is needed for critical research continuity.'
+            ].map((text, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <span style={{ color: 'var(--tertiary)', fontSize: '0.875rem', flexShrink: 0 }}>✓</span>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8125rem', color: 'var(--on-surface-variant)' }}>{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Total & Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid rgba(194,198,211,0.15)' }}>
+          <div>
+            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.25rem' }}>Aggregated Total</p>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <span style={{ fontFamily: 'var(--font-headline)', fontSize: '1rem', fontWeight: 900, color: 'var(--primary)' }}>RM</span>
+              <span style={{ fontFamily: 'var(--font-headline)', fontSize: '2.75rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em' }}>{calculateTotal().toLocaleString('en', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.75rem 1.5rem', background: 'transparent',
+              border: '1px solid rgba(194,198,211,0.2)',
+              fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700,
+              color: 'var(--on-surface-variant)', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+              transition: 'background 0.15s'
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-low)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <Save size={16} /> Save Draft
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="gradient-fill"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.75rem 2rem', color: 'var(--on-primary)',
+                fontFamily: 'var(--font-headline)', fontSize: '0.875rem', fontWeight: 700,
+                borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
+                transition: 'opacity 0.15s', opacity: submitting ? 0.5 : 1
+              }}
+            >
+              <Send size={16} /> {submitting ? 'Processing...' : 'Submit Request'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
