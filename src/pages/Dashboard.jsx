@@ -1,3 +1,4 @@
+// Trigger redeploy
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowUpRight, ArrowDownRight, TrendingUp, PieChart, ShoppingCart, Activity, Plus, Search, Filter } from 'lucide-react'
