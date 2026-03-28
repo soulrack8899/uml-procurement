@@ -61,7 +61,7 @@ const TenantOnboarding = () => {
                 Initialize Enterprise Tenant
               </h1>
               <p style={{ fontFamily: 'var(--font-body)', color: 'var(--on-surface-variant)', maxWidth: '32rem', margin: '0 auto', lineHeight: 1.5 }}>
-                Provision a new secure environment within the UMLAB ecosystem. Each tenant operates on a strictly isolated ledger infrastructure.
+                Provision a new secure environment within the ProcuSure ecosystem. Each tenant operates on a strictly isolated ledger infrastructure.
               </p>
             </div>
 

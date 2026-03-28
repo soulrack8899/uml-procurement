@@ -6,16 +6,16 @@
    ============================================================ */
 
 :root {
-  /* ── Brand Primaries (Stitch exact) ── */
-  --primary:              #00346f;
-  --primary-container:    #004a99;
-  --primary-fixed:        #d7e2ff;
-  --primary-fixed-dim:    #abc7ff;
-  --primary-gradient:     linear-gradient(135deg, #00346f 0%, #004a99 100%);
+  /* ── Brand Primaries (ProcuSure exact) ── */
+  --primary:              #0E4D51;
+  --primary-container:    #0b3b3e;
+  --primary-fixed:        #c6eeea;
+  --primary-fixed-dim:    #8edcd6;
+  --primary-gradient:     linear-gradient(135deg, #0E4D51 0%, #0b3b3e 100%);
   --on-primary:           #ffffff;
-  --on-primary-fixed:     #001b3f;
-  --on-primary-fixed-variant: #00458f;
-  --on-primary-container: #9bbdff;
+  --on-primary-fixed:     #022325;
+  --on-primary-fixed-variant: #07383b;
+  --on-primary-container: #8eebe4;
 
   /* ── Surfaces (Stitch tonal layer hierarchy) ── */
   --surface:                    #f8f9fb;   /* Level 0: Foundation */
@@ -33,25 +33,25 @@
   --on-surface-variant:   #424751;
   --on-background:        #191c1e;
 
-  /* ── Secondary (Pending / Info) ── */
-  --secondary:                  #48626e;
-  --secondary-container:        #cbe7f5;
-  --secondary-fixed:            #cbe7f5;
-  --secondary-fixed-dim:        #afcbd8;
-  --on-secondary:               #ffffff;
-  --on-secondary-container:     #4e6874;
-  --on-secondary-fixed:         #021f29;
-  --on-secondary-fixed-variant: #304a55;
+  /* ── Secondary (Accent/Gold) ── */
+  --secondary:                  #F2B705;
+  --secondary-container:        #ffe4a3;
+  --secondary-fixed:            #ffeccd;
+  --secondary-fixed-dim:        #ebd084;
+  --on-secondary:               #402c00;
+  --on-secondary-container:     #574000;
+  --on-secondary-fixed:         #2a1e00;
+  --on-secondary-fixed-variant: #402c00;
 
-  /* ── Tertiary (Approved / Success) ── */
-  --tertiary:                   #003d35;
-  --tertiary-container:         #00564c;
-  --tertiary-fixed:             #97f3e2;
-  --tertiary-fixed-dim:         #7ad7c6;
+  /* ── Tertiary (Success) ── */
+  --tertiary:                   #27AE60;
+  --tertiary-container:         #1d8f4c;
+  --tertiary-fixed:             #aefbd8;
+  --tertiary-fixed-dim:         #7be3aa;
   --on-tertiary:                #ffffff;
-  --on-tertiary-fixed:          #00201b;
-  --on-tertiary-fixed-variant:  #005047;
-  --on-tertiary-container:      #70ccbc;
+  --on-tertiary-fixed:          #032612;
+  --on-tertiary-fixed-variant:  #157a3e;
+  --on-tertiary-container:      #8efbb2;
 
   /* ── Error ── */
   --error:                #ba1a1a;

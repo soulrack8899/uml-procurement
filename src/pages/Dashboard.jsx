@@ -10,20 +10,25 @@ import { useCompany, getStatusChipClass } from '../App'
    ───────────────────────────────────────────────────── */
 
 const Dashboard = () => {
-  const { currentCompany } = useCompany()
+  const { currentCompany, activeRole } = useCompany()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (currentCompany) fetchData()
-  }, [currentCompany])
+    if (currentCompany && activeRole) fetchData()
+  }, [currentCompany, activeRole])
 
   const fetchData = async () => {
     setLoading(true)
     try {
       const data = await procurementApi.getRequests()
-      setRequests(data)
+      if (activeRole === 'REQUESTER') {
+        const myUserId = parseInt(localStorage.getItem("currentUserId") || "1")
+        setRequests(data.filter(r => r.created_by === myUserId))
+      } else {
+        setRequests(data)
+      }
     } catch (err) {
       console.error(err)
     } finally {

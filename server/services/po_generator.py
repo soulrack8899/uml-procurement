@@ -14,7 +14,7 @@ def generate_po_pdf(request_data, output_path):
         'PO_Title',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.hexColor("#00346f"),
+        textColor=colors.hexColor("#0E4D51"),
         spaceAfter=20,
         fontName='Helvetica-Bold'
     )
@@ -41,7 +41,7 @@ def generate_po_pdf(request_data, output_path):
         [Paragraph("<b>VENDOR</b>", label_style), Paragraph("<b>SHIP TO</b>", label_style)],
         [
             Paragraph(f"{request_data['vendor_name']}<br/>ID: {request_data['vendor_id']}", styles['Normal']),
-            Paragraph("UMLAB Sarawak HQ<br/>Level 4, Wisma Sumber Alam<br/>93050 Kuching", styles['Normal'])
+            Paragraph("ProcuSure Enterprise HQ<br/>Level 4, Wisma Sumber Alam<br/>93050 Kuching", styles['Normal'])
         ]
     ]
     
@@ -77,7 +77,7 @@ def generate_po_pdf(request_data, output_path):
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('GRID', (0, 0), (-1, -2), 0.5, colors.hexColor("#c2c6d3")),
-        ('BOX', (0, 0), (-1, -1), 1, colors.hexColor("#00346f")),
+        ('BOX', (0, 0), (-1, -1), 1, colors.hexColor("#0E4D51")),
     ]))
     content_list.append(items_table)
     content_list.append(Spacer(1, 40))
@@ -85,7 +85,7 @@ def generate_po_pdf(request_data, output_path):
     # Audit Trail (Simplified for PO)
     content_list.append(Paragraph("<b>Authorization Trace</b>", label_style))
     content_list.append(Spacer(1, 10))
-    content_list.append(Paragraph("Digitally verified by UMLAB Procurement System High-Precision Ledger.", styles['Normal']))
+    content_list.append(Paragraph("Digitally verified by ProcuSure High-Precision Ledger.", styles['Normal']))
     
     # Generate PDF
     doc.build(content_list)

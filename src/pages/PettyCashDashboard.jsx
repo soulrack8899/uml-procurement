@@ -42,6 +42,14 @@ const PettyCashDashboard = () => {
     finally { setSubmitting(false) }
   }
 
+  const handleDisburse = async (e, id) => {
+    e.stopPropagation()
+    try {
+      await procurementApi.disbursePettyCash(id)
+      fetchData()
+    } catch (err) { alert(err.message) }
+  }
+
   const totalSpent = requests.reduce((sum, r) => sum + r.amount, 0)
   const balance = 5000 - totalSpent
   const usagePercent = Math.min(Math.round((totalSpent / 5000) * 100), 100)
@@ -207,6 +215,18 @@ const PettyCashDashboard = () => {
                   RM {req.amount.toLocaleString('en', { minimumFractionDigits: 2 })}
                 </span>
                 <span className={`chip ${getStatusChipClass(req.status)}`}>{req.status}</span>
+                {activeRole === 'MANAGER' && req.status !== 'DISBURSED' && (
+                  <button 
+                    onClick={(e) => handleDisburse(e, req.id)}
+                    style={{
+                      padding: '0.4rem 0.75rem', background: 'var(--primary)', color: 'white',
+                      border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                      fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase'
+                    }}
+                  >
+                    Disburse
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

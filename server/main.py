@@ -45,16 +45,48 @@ def on_startup():
              session.add(CompanySettings(company_id=alfa.id, approval_threshold=10000.0))
              
              # Global Admin User
-             karlos = User(name="Karlos Albert", global_role=UserRole.ADMIN)
+             karlos = User(name="Karlos Albert", global_role=UserRole.GLOBAL_ADMIN)
              session.add(karlos)
+             
+             # Case C: Johor Partner
+             johor = User(name="Johor Partner")
+             session.add(johor)
+             
              session.commit()
              session.refresh(karlos)
+             session.refresh(johor)
              
              # Mapping DIFFERENT ROLES for DIFFERENT COMPANIES
              # Manager in UMLAB
              session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.MANAGER))
              # Finance in Alfa Mount
              session.add(TenantAccess(user_id=karlos.id, company_id=alfa.id, role=UserRole.FINANCE))
+             
+             # Case C: Assign Johor Partner ONLY to UMLAB Sarawak as Director
+             session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
+             
+             # Case A: Alfa Mount pending request for RM 10,000
+             request_a = ProcurementRequest(
+                 company_id=alfa.id,
+                 created_by=karlos.id,
+                 title="Enterprise Server Rack",
+                 vendor_name="Dell Emc",
+                 vendor_id="V-103",
+                 total_amount=10000.0,
+                 status=StatusEnum.PENDING_DIRECTOR
+             )
+             session.add(request_a)
+             
+             # Case B: UMLAB Sarawak petty cash request for RM 150 Ready for disbursement
+             petty_b = PettyCash(
+                 company_id=umlab.id,
+                 requester_id=karlos.id,
+                 amount=150.0,
+                 receipt_url="PC-0012",
+                 status=PettyCashStatus.APPROVED
+             )
+             session.add(petty_b)
+             
              session.commit()
 
 # Dependency for DB Session
@@ -68,10 +100,20 @@ def get_active_session_context(
     x_user_id: int = Header(...), 
     session: Session = Depends(get_session)
 ):
-    """
-    Verifies TenantAccess mapping.
-    Extracts the specific ROLE assigned to this user within THIS company.
-    """
+    user = session.get(User, x_user_id)
+    if not user:
+        raise HTTPException(status_code=403, detail="Forbidden: User not found.")
+
+    company = session.get(Company, x_company_id) if x_company_id else None
+
+    # Global Admin bypasses tenant checks
+    if user.global_role == UserRole.GLOBAL_ADMIN:
+        return {
+            "company": company,
+            "user": user,
+            "active_role": UserRole.GLOBAL_ADMIN
+        }
+
     access = session.exec(select(TenantAccess).where(
         TenantAccess.company_id == x_company_id,
         TenantAccess.user_id == x_user_id
@@ -79,9 +121,6 @@ def get_active_session_context(
     
     if not access:
         raise HTTPException(status_code=403, detail="Forbidden: No access record for this user in this entity.")
-    
-    company = session.get(Company, x_company_id)
-    user = session.get(User, x_user_id)
     
     return {
         "company": company,
@@ -149,6 +188,7 @@ def create_request(
     session: Session = Depends(get_session)
 ):
     request.company_id = context['company'].id
+    request.created_by = context['user'].id
     session.add(request)
     session.commit()
     session.refresh(request)
@@ -159,6 +199,10 @@ def list_requests(
     context: dict = Depends(get_active_session_context), 
     session: Session = Depends(get_session)
 ):
+    if context['active_role'] == UserRole.GLOBAL_ADMIN:
+        return session.exec(select(ProcurementRequest)).all()
+    
+    # Otherwise, filter by the active company ID (which handles DIRECTOR and others)
     return session.exec(select(ProcurementRequest).where(
         ProcurementRequest.company_id == context['company'].id
     )).all()
@@ -252,8 +296,8 @@ def approve_pc(pc_id: int, context: dict = Depends(get_active_session_context), 
 @app.post("/petty-cash/{pc_id}/disburse")
 def disburse_pc(pc_id: int, context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
     pc = session.exec(select(PettyCash).where(PettyCash.id == pc_id, PettyCash.company_id == context['company'].id)).first()
-    if context['active_role'] not in [UserRole.FINANCE, UserRole.ADMIN]:
-         raise HTTPException(status_code=403, detail="Finance/Admin authorization required for cash payout.")
+    if context['active_role'] not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.MANAGER]:
+         raise HTTPException(status_code=403, detail="Finance/Admin/Manager authorization required for cash payout.")
     pc.status = PettyCashStatus.DISBURSED
     pc.disbursed_at = datetime.utcnow()
     pc.disbursed_by_id = context['user'].id

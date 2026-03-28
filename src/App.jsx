@@ -122,9 +122,16 @@ function AppContent() {
             {sidebarOpen ? (
               <div>
                 <span style={{ 
-                  fontFamily: 'var(--font-headline)', fontSize: '1.125rem', fontWeight: 900, 
-                  color: 'var(--primary)', letterSpacing: '-0.02em' 
-                }}>UMLAB</span>
+                  fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 900, 
+                  color: 'var(--primary)', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px'
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M40 70 L20 50 L40 30" stroke="var(--primary)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M60 70 L80 50 L60 30" stroke="var(--secondary)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="50" cy="50" r="10" fill="var(--tertiary)"/>
+                  </svg>
+                  ProcuSure
+                </span>
                 <div style={{ marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <div style={{ 
                     width: 48, height: 48, borderRadius: 'var(--radius-sm)', 
@@ -145,9 +152,14 @@ function AppContent() {
             ) : (
               <div style={{ 
                 width: 40, height: 40, borderRadius: 'var(--radius-sm)', 
-                background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--on-primary)', fontWeight: 900, fontSize: '0.875rem', margin: '0 auto'
-              }}>UL</div>
+                background: 'var(--surface-container-highest)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--primary)', margin: '0 auto'
+              }}>
+                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M40 70 L20 50 L40 30" stroke="var(--primary)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M60 70 L80 50 L60 30" stroke="var(--secondary)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
             )}
           </div>
 
@@ -244,33 +256,51 @@ function AppContent() {
               </button>
 
               {/* Company Switcher (Stitch structure) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <div style={{ 
-                  width: 40, height: 40, background: 'var(--primary)', borderRadius: 'var(--radius-sm)', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--on-primary)', fontWeight: 900, fontSize: '0.75rem'
-                }}>UL</div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <select
-                      value={currentCompany?.id || ""}
-                      onChange={(e) => selectTenant(companies.find(c => c.id.toString() === e.target.value))}
-                      style={{
-                        fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '1.25rem',
-                        color: 'var(--primary)', background: 'none', border: 'none', outline: 'none',
-                        cursor: 'pointer', padding: 0, letterSpacing: '-0.01em',
-                        appearance: 'none'
-                      }}
-                    >
-                      {Array.isArray(companies) && companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    <ChevronDown size={14} style={{ color: 'var(--outline)' }} />
+              {companies.length > 1 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <div style={{ 
+                    width: 40, height: 40, background: 'var(--primary)', borderRadius: 'var(--radius-sm)', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--on-primary)', fontWeight: 900, fontSize: '0.75rem'
+                  }}>{currentCompany?.name?.substring(0, 2).toUpperCase() || 'PS'}</div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <select
+                        value={currentCompany?.id || ""}
+                        onChange={(e) => selectTenant(companies.find(c => c.id.toString() === e.target.value))}
+                        style={{
+                          fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '1.25rem',
+                          color: 'var(--primary)', background: 'none', border: 'none', outline: 'none',
+                          cursor: 'pointer', padding: 0, letterSpacing: '-0.01em',
+                          appearance: 'none'
+                        }}
+                      >
+                        {Array.isArray(companies) && companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                      <ChevronDown size={14} style={{ color: 'var(--outline)' }} />
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--outline)' }}>
+                      Corporate Entity
+                    </span>
                   </div>
-                  <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--outline)' }}>
-                    Corporate Entity
-                  </span>
                 </div>
-              </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ 
+                    width: 40, height: 40, background: 'var(--primary)', borderRadius: 'var(--radius-sm)', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'var(--on-primary)', fontWeight: 900, fontSize: '0.75rem'
+                  }}>{currentCompany?.name?.substring(0, 2).toUpperCase() || 'PS'}</div>
+                  <div>
+                    <div style={{ fontFamily: 'var(--font-headline)', fontWeight: 700, fontSize: '1.25rem', color: 'var(--primary)', letterSpacing: '-0.01em' }}>
+                      {currentCompany?.name || 'ProcuSure Dashboard'}
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--outline)' }}>
+                      Corporate Entity
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right: Search + Avatar */}
