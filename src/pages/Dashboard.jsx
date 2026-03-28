@@ -3,16 +3,19 @@ import { motion } from 'framer-motion'
 import { ArrowUpRight, ArrowDownRight, TrendingUp, PieChart, ShoppingCart, Activity, Plus, Search, Filter } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { procurementApi } from '../services/api'
+import { useCompany } from '../App'
 
 const Dashboard = () => {
+  const { currentCompany } = useCompany()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    if (currentCompany) fetchData()
+  }, [currentCompany])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
       const data = await procurementApi.getRequests()
       setRequests(data)
@@ -38,17 +41,19 @@ const Dashboard = () => {
           <motion.p 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="label-md text-primary font-black uppercase tracking-widest"
+            className="label-md text-primary font-black uppercase tracking-widest flex items-center gap-2"
           >
-            Digital Procurement Ledger
+            Digital Ledger Context 
+            <span className="h-1 w-1 bg-primary rounded-full" />
+            <span className="text-on-surface-variant">{currentCompany?.name || 'Loading...'}</span>
           </motion.p>
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="display-md text-on-surface text-5xl font-black"
+            className="display-md text-on-surface text-5xl font-black tracking-tight"
           >
-            Operational Overview
+            SaaS Operational Overview
           </motion.h1>
         </div>
         <Link to="/procurement" className="flex items-center gap-3 px-8 py-4 gradient-fill text-white label-md font-bold rounded-sm shadow-ambient hover:opacity-90 transition-opacity">
@@ -88,7 +93,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <h3 className="title-lg font-black flex items-center gap-3">
               <ShoppingCart size={22} className="text-primary" />
-              Real-Time Procurement Stream
+              Tenant Request Stream
             </h3>
             <div className="flex items-center gap-4">
                <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors text-on-surface-variant">
@@ -104,26 +109,28 @@ const Dashboard = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-surface-container-low border-b border-outline-variant-low">
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest">ID</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest">Vendor Context</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest">Amount (RM)</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest">Status Flow</th>
-                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest">Action</th>
+                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Sequencer ID</th>
+                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Vendor Context</th>
+                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Amount (RM)</th>
+                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Protocol Flow</th>
+                  <th className="p-6 label-sm font-black text-on-surface-variant uppercase tracking-widest text-[10px]">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="5" className="p-12 text-center label-md animate-pulse">Synchronizing with ledger...</td></tr>
+                  <tr><td colSpan="5" className="p-12 text-center label-md animate-pulse">Syncing with tenant ledger...</td></tr>
+                ) : requests.length === 0 ? (
+                  <tr><td colSpan="5" className="p-12 text-center text-on-surface-variant label-md">No records found for this context.</td></tr>
                 ) : requests.map((req, i) => (
                   <tr key={req.id} className="hover:bg-surface-container-low transition-colors group border-b border-outline-variant-low last:border-none">
                     <td className="p-6 label-md font-black text-primary">#{req.id}</td>
                     <td className="p-6">
                       <p className="body-md font-bold">{req.vendor_name}</p>
-                      <p className="label-sm text-on-surface-variant">ID: {req.vendor_id}</p>
+                      <p className="label-sm text-on-surface-variant font-medium">ID: {req.vendor_id}</p>
                     </td>
                     <td className="p-6 body-md font-black text-on-surface">{req.total_amount.toLocaleString()}</td>
                     <td className="p-6">
-                      <span className={`chip chip-pending font-bold uppercase`}>{req.status}</span>
+                      <span className={`chip chip-pending font-black uppercase text-[10px]`}>{req.status}</span>
                     </td>
                     <td className="p-6">
                       <Link 
@@ -140,19 +147,18 @@ const Dashboard = () => {
           </div>
         </section>
 
-        {/* System Activity & Global Audit */}
+        {/* Global Audit Log */}
         <section className="space-y-8">
           <h3 className="title-lg font-black flex items-center gap-3">
             <Activity size={22} className="text-primary" />
-            Global Audit Trace
+            Live Telemetry
           </h3>
           
           <div className="surface-card space-y-8 relative before:absolute before:left-[27px] before:top-4 before:bottom-4 before:w-[1px] before:border-l before:border-dashed before:border-outline-variant">
             {[
-              { time: '10:45 AM', action: 'Digital PO Generated', user: 'System Bot', target: 'REQ-45' },
-              { time: '09:12 AM', action: 'Managerial Sign-off', user: 'KA Albert', target: 'REQ-45' },
-              { time: 'Yesterday', action: 'New Vendor Verified', user: 'System', target: 'Tech Corp' },
-              { time: 'Yesterday', action: 'Budget Lock Engaged', user: 'Finance', target: 'Threshold: 5K' },
+              { time: 'Active', action: 'Ledger Isolated', user: currentCompany?.name, target: 'Tenant-OK' },
+              { time: 'System', action: 'Multi-Tenant Auth', user: 'Gateway', target: '200 OK' },
+              { time: 'Ready', action: 'Petty Cash Ready', user: 'Finance', target: 'Enabled' },
             ].map((activity, i) => (
               <div key={i} className="flex gap-6 relative group">
                 <div className="w-6 h-6 rounded-full bg-surface-container-highest border-2 border-primary shrink-0 z-10 group-hover:bg-primary transition-colors" />
