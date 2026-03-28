@@ -144,4 +144,3 @@ const TenantOnboarding = () => {
 }
 
 export default TenantOnboarding
-
