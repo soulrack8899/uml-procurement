@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Globe, Plus, CheckCircle, ArrowRight, Zap, Shield, Database } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { procurementApi } from '../services/api'
