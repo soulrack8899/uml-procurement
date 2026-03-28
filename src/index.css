@@ -1,0 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Colors */
+  --primary: #00346f;
+  --primary-container: #004a99;
+  --primary-gradient: linear-gradient(135deg, #00346f 0%, #004a99 100%);
+  --on-primary: #ffffff;
+  
+  --surface: #f8f9fb;
+  --surface-container-low: #f2f4f6;
+  --surface-container-lowest: #ffffff;
+  --surface-container-high: #e6e8ea;
+  --surface-container-highest: #e0e3e5;
+  
+  --on-surface: #191c1e;
+  --on-surface-variant: #424751;
+  
+  --secondary-container: #cbe7f5;
+  --on-secondary-container: #4e6874;
+  
+  --tertiary: #003d35;
+  --tertiary-fixed: #97f3e2;
+  --on-tertiary-fixed-variant: #005047;
+  
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  
+  --outline-variant: #c2c6d3;
+  --outline-variant-low: rgba(194, 198, 211, 0.15);
+  
+  --shadow-ambient: 0 20px 40px rgba(25, 28, 30, 0.06);
+  
+  /* Radii */
+  --radius-sm: 0.125rem;
+  --radius-full: 9999px;
+  
+  /* Fonts */
+  --font-headline: 'Public Sans', sans-serif;
+  --font-body: 'Public Sans', sans-serif;
+  --font-label: 'Inter', sans-serif;
+}
+
+/* Reset & Base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography Scale */
+h1, h2, h3, .display-md {
+  font-family: var(--font-headline);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.display-md {
+  font-size: 2.75rem;
+  line-height: 1.2;
+}
+
+.title-lg {
+  font-size: 1.375rem;
+  font-weight: 600;
+}
+
+.body-md {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.label-md {
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.label-sm {
+  font-family: var(--font-label);
+  font-size: 0.625rem;
+  font-weight: 500;
+}
+
+/* Utilities */
+.surface-card {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-sm);
+  padding: 1.5rem;
+}
+
+.surface-section {
+  background: var(--surface-container-low);
+  padding: 2rem;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.gradient-fill {
+  background: var(--primary-gradient);
+}
+
+.chip {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-label);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.chip-pending {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+.chip-approved {
+  background: var(--tertiary-fixed);
+  color: var(--on-tertiary-fixed-variant);
+}
+
+.chip-rejected {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+/* The "No-Line" Rules */
+.no-border {
+  border: none !important;
+}
+
+.bottom-stroke {
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.bottom-stroke:focus-within {
+  border-bottom: 2px solid var(--primary);
+}
+
+/* Transitions */
+.hover-lift {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.hover-lift:hover {
+  background-color: var(--surface-container-high);
+}
