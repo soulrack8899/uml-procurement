@@ -14,12 +14,14 @@ export const procurementApi = {
   // --- Session & Active Role Context ---
   whoami: async () => {
     const response = await fetch(`${API_BASE_URL}/session/whoami`, { headers: getHeaders() });
+    if (!response.ok) throw new Error("Session Context Error");
     return response.json();
   },
 
   // --- Companies ---
   getCompanies: async () => {
     const response = await fetch(`${API_BASE_URL}/companies/`);
+    if (!response.ok) throw new Error("Failed to fetch companies");
     return response.json();
   },
   

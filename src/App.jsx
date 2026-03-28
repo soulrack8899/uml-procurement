@@ -40,10 +40,14 @@ function AppContent() {
   const fetchCompanies = async () => {
     try {
       const data = await procurementApi.getCompanies()
-      setCompanies(data)
-      const savedId = localStorage.getItem("currentCompanyId")
-      const initial = data.find(c => c.id.toString() === savedId) || data[0]
-      if (initial) selectTenant(initial)
+      if (Array.isArray(data)) {
+        setCompanies(data)
+        const savedId = localStorage.getItem("currentCompanyId")
+        const initial = data.find(c => c.id.toString() === savedId) || data[0]
+        if (initial) selectTenant(initial)
+      } else {
+        console.error("Context Registry Failure: Invalid data format", data)
+      }
     } catch (err) {
       console.error("Context Registry Failure:", err)
     }
@@ -152,7 +156,7 @@ function AppContent() {
                       onChange={(e) => selectTenant(companies.find(c => c.id.toString() === e.target.value))}
                       className="bg-transparent border-none outline-none title-md font-black text-on-surface cursor-pointer p-0 appearance-none hover:text-primary transition-colors"
                     >
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {Array.isArray(companies) && companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                  </div>
               </div>

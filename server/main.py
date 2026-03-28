@@ -227,6 +227,12 @@ def transition_status(
 
     return {"status": request.status}
 
+# --- Companies ---
+
+@app.get("/companies/", response_model=List[Company])
+def list_companies(session: Session = Depends(get_session)):
+    return session.exec(select(Company)).all()
+
 # --- Petty Cash (Contextual Role Check) ---
 
 @app.get("/petty-cash/", response_model=List[PettyCash])
