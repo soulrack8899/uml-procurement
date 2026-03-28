@@ -10,6 +10,7 @@ import VendorDirectory from './pages/VendorDirectory'
 import ApprovalView from './pages/ApprovalView'
 import RequestDetails from './pages/RequestDetails'
 import PettyCashDashboard from './pages/PettyCashDashboard'
+import PaymentRequest from './pages/PaymentRequest'
 import AdminSettings from './pages/AdminSettings'
 import TenantOnboarding from './pages/TenantOnboarding'
 
@@ -91,6 +92,7 @@ function AppContent() {
     { id: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: '/procurement', label: 'Procurement', icon: <FileText size={20} /> },
     { id: '/petty-cash', label: 'Petty Cash', icon: <Wallet size={20} /> },
+    { id: '/payment-request', label: 'Payment Request', icon: <FileText size={20} /> },
     { id: '/vendors', label: 'Vendors', icon: <Users size={20} /> },
     { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} /> },
     { id: '/admin-settings', label: 'Admin Settings', icon: <Settings size={20} /> },
@@ -298,6 +300,7 @@ function AppContent() {
                 <Route path="/approvals" element={<ApprovalView />} />
                 <Route path="/request/:id" element={<RequestDetails />} />
                 <Route path="/petty-cash" element={<PettyCashDashboard />} />
+                <Route path="/payment-request" element={<PaymentRequest />} />
                 <Route path="/admin-settings" element={<AdminSettings />} />
                 <Route path="/onboard" element={<TenantOnboarding />} />
               </Routes>
