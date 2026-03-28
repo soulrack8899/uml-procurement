@@ -2,7 +2,7 @@ const API_BASE_URL = "http://localhost:8000";
 
 const getHeaders = () => {
   const companyId = localStorage.getItem("currentCompanyId") || "1"; 
-  const userId = localStorage.getItem("currentUserId") || "1"; // Default to initial admin if none set
+  const userId = localStorage.getItem("currentUserId") || "1"; 
   return {
     "Content-Type": "application/json",
     "X-Company-ID": companyId,
@@ -11,6 +11,12 @@ const getHeaders = () => {
 };
 
 export const procurementApi = {
+  // --- Session & Active Role Context ---
+  whoami: async () => {
+    const response = await fetch(`${API_BASE_URL}/session/whoami`, { headers: getHeaders() });
+    return response.json();
+  },
+
   // --- Companies ---
   getCompanies: async () => {
     const response = await fetch(`${API_BASE_URL}/companies/`);
@@ -20,16 +26,13 @@ export const procurementApi = {
   // --- Procurement ---
   getRequests: async () => {
     const response = await fetch(`${API_BASE_URL}/requests/`, { headers: getHeaders() });
-    if (!response.ok) {
-       if (response.status === 403) throw new Error("Unauthorized access to tenant ledger.");
-       throw new Error("Failed to fetch requests");
-    }
+    if (!response.ok) throw new Error("Unauthorized/Forbidden Context");
     return response.json();
   },
   
   getRequest: async (id) => {
     const response = await fetch(`${API_BASE_URL}/requests/${id}`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Failed to fetch request details in context");
+    if (!response.ok) throw new Error("Request not found in this tenant.");
     return response.json();
   },
   
@@ -49,7 +52,7 @@ export const procurementApi = {
     });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || "Transition failed");
+      throw new Error(error.detail || "Transition failed: Role or Policy check error.");
     }
     return response.json();
   },

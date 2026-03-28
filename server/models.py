@@ -7,7 +7,7 @@ from sqlmodel import Field, Relationship, SQLModel, create_engine, Session, sele
 
 class StatusEnum(str, Enum):
     DRAFT = "DRAFT"
-    SUBMITTED = "SUBMITTED" # Renamed from PENDING_MANAGER
+    SUBMITTED = "SUBMITTED"
     PENDING_MANAGER = "PENDING_MANAGER"
     PENDING_DIRECTOR = "PENDING_DIRECTOR"
     APPROVED = "APPROVED"
@@ -27,12 +27,13 @@ class UserRole(str, Enum):
     FINANCE = "FINANCE"
     ADMIN = "ADMIN"
 
-# --- Multi-Tenant Mapping ---
+# --- Multi-Tenant Mapping (Tenant-Specific Roles) ---
 
-class UserTenant(SQLModel, table=True):
-    """Bridge table for User-to-Tenant access control"""
+class TenantAccess(SQLModel, table=True):
+    """Bridge table for User-to-Tenant access control with entity-specific roles"""
     user_id: int = Field(foreign_key="user.id", primary_key=True)
     company_id: int = Field(foreign_key="company.id", primary_key=True)
+    role: UserRole = Field(default=UserRole.REQUESTER)
 
 # --- Multi-Tenant Models ---
 
@@ -45,7 +46,7 @@ class Company(SQLModel, table=True):
     settings: "CompanySettings" = Relationship(back_populates="company")
     requests: List["ProcurementRequest"] = Relationship(back_populates="company")
     petty_cash: List["PettyCash"] = Relationship(back_populates="company")
-    users: List["User"] = Relationship(back_populates="companies", link_model=UserTenant)
+    users: List["User"] = Relationship(back_populates="companies", link_model=TenantAccess)
 
 class CompanySettings(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -58,9 +59,10 @@ class CompanySettings(SQLModel, table=True):
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
-    role: UserRole
+    # Global role (e.g. for super admin access)
+    global_role: UserRole = Field(default=UserRole.REQUESTER)
     
-    companies: List[Company] = Relationship(back_populates="users", link_model=UserTenant)
+    companies: List[Company] = Relationship(back_populates="users", link_model=TenantAccess)
 
 # --- Procurement Models ---
 
