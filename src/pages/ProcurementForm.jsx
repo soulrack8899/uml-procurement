@@ -52,9 +52,15 @@ const ProcurementForm = () => {
         return;
     }
 
+    const total = calculateTotal()
+    if (total > 1000 && !quotationUrl) {
+        if (!window.confirm("Standard governance requires a quotation for spends over RM 1,000. Proceed anyway?")) {
+            return;
+        }
+    }
+
     setSubmitting(true)
     try {
-      const total = calculateTotal()
       const requestData = {
         title: title || items[0].description || "Untitled Procurement",
         vendor_name: vendor.name || "Unknown Vendor",
@@ -72,7 +78,6 @@ const ProcurementForm = () => {
       
       const res = await procurementApi.createRequest(requestData)
       if (res && res.id) {
-        // Automatically transition to SUBMITTED status on backend if not already done
         navigate(`/request/${res.id}`)
       } else {
         throw new Error("Server communication anomaly: ID not returned.")
@@ -113,7 +118,6 @@ const ProcurementForm = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '8fr 4fr', gap: isMobile ? '1.5rem' : '2.5rem', alignItems: 'start' }}>
         
-        {/* Main Composition Surface */}
         <div style={S.card}>
           <div style={{ background: 'var(--surface-container-high)', padding: '1.5rem 2.5rem', borderBottom: '1px solid rgba(194,198,211,0.1)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
              <FileText size={20} style={{ color: 'var(--primary)' }} />
@@ -122,7 +126,6 @@ const ProcurementForm = () => {
           
           <form style={{ padding: isMobile ? '1.5rem' : '3rem' }}>
             
-            {/* Title & Vendor Area */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', marginBottom: '4rem' }}>
                <div>
                   <label style={S.label}>Expenditure Title / Reference</label>
@@ -141,7 +144,6 @@ const ProcurementForm = () => {
                </div>
             </div>
 
-            {/* Line Items Grid */}
             <div style={{ marginBottom: '4rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Line Items Decomposition</h3>
@@ -189,34 +191,43 @@ const ProcurementForm = () => {
               </div>
             </div>
 
-            {/* Evidence & Action Area */}
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', paddingTop: '3rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
                
-               {/* Upload Quotation */}
-               <div style={{ flex: 1, width: '100%' }}>
-                  <label style={S.label}>Quotation Attachment (Proof of Spend)</label>
-                  <div 
+               <div style={{ flex: 1, width: '100%', maxWidth: isMobile ? '100%' : '50%' }}>
+                  <label style={S.label}>Critical Documentation</label>
+                  <motion.div 
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                     onClick={() => fileInputRef.current.click()}
                     style={{ 
-                      width: '100%', padding: '1.25rem', borderRadius: 'var(--radius-sm)', 
-                      border: '2px dashed var(--outline-variant)', background: quotationUrl ? 'var(--secondary-container)' : 'var(--surface-container-low)',
-                      display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', transition: 'all 0.2s'
+                      width: '100%', padding: '1.5rem', borderRadius: 'var(--radius-lg)', 
+                      border: '2px dashed var(--primary)', background: quotationUrl ? 'var(--primary-container)' : 'var(--surface-container-low)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', cursor: 'pointer', transition: 'all 0.2s',
+                      boxShadow: '0 10px 20px rgba(0,0,0,0.05)'
                     }}>
                      <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
-                     {uploading ? (
-                        <Loader2 className="animate-spin" size={24} style={{ color: 'var(--primary)' }} />
-                     ) : quotationUrl ? (
-                        <CheckCircle2 size={24} style={{ color: 'var(--on-secondary-container)' }} />
-                     ) : (
-                        <CloudUpload size={24} style={{ color: 'var(--outline)' }} />
-                     )}
-                     <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 800, color: quotationUrl ? 'var(--on-secondary-container)' : 'var(--primary)' }}>
-                           {uploading ? "Uploading Evidence..." : quotationUrl ? "Quotation Locked" : "Upload Quotation Document"}
-                        </p>
-                        <p style={{ fontSize: '0.625rem', color: 'var(--outline)' }}>{quotationName || "PDF, JPG, or PNG (Max 10MB)"}</p>
+                     <div style={{ 
+                        width: 56, height: 56, borderRadius: '50%', background: quotationUrl ? 'var(--primary)' : 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: quotationUrl ? 'white' : 'var(--primary)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                     }}>
+                        {uploading ? (
+                           <Loader2 className="animate-spin" size={24} />
+                        ) : quotationUrl ? (
+                           <CheckCircle2 size={24} />
+                        ) : (
+                           <Plus size={24} />
+                        )}
                      </div>
-                  </div>
+                     <div style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>
+                           {uploading ? "Processing Document..." : quotationUrl ? "Quotation Attached" : "Add Quotation"}
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--outline)', marginTop: '4px' }}>
+                           {quotationName || "Mandatory for spends > RM 1,000"}
+                        </p>
+                     </div>
+                  </motion.div>
                </div>
 
                <div style={{ display: 'flex', gap: '1.5rem', width: isMobile ? '100%' : 'auto' }}>
@@ -238,7 +249,6 @@ const ProcurementForm = () => {
           </form>
         </div>
 
-        {/* Informational Guardrails */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
            <div style={{ ...S.card, padding: '2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
