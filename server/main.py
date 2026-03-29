@@ -13,13 +13,37 @@ from services.po_generator import generate_po_pdf
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
-# Enable CORS for React frontend
+# Enable CORS for React frontend (Vercel) and local development
+origins = [
+    "https://uml-procurement-internal.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "https://uml-procurement-internal-production.up.railway.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins + ["*"],
+    allow_credentials=False, # Set to True once we use cookies/auth headers
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi.responses import JSONResponse
+from fastapi import Request
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # This handler helps us catch unhandled 500s and ensures they still have CORS headers
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "exception": str(exc)},
+        headers={
+            "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
+            "Access-Control-Allow-Credentials": "false",
+        }
+    )
 
 @app.on_event("startup")
 def on_startup():
@@ -106,13 +130,19 @@ def get_active_session_context(
 
     company = session.get(Company, x_company_id) if x_company_id else None
 
-    # Global Admin bypasses tenant checks
+    # Global Admin bypasses tenant checks, but still needs a company for company-specific actions
     if user.global_role == UserRole.GLOBAL_ADMIN:
+        if x_company_id and not company:
+             raise HTTPException(status_code=404, detail=f"Company {x_company_id} not found.")
+             
         return {
             "company": company,
             "user": user,
             "active_role": UserRole.GLOBAL_ADMIN
         }
+
+    if not company:
+        raise HTTPException(status_code=404, detail=f"Company {x_company_id} not found.")
 
     access = session.exec(select(TenantAccess).where(
         TenantAccess.company_id == x_company_id,
@@ -214,10 +244,17 @@ def create_request(
     context: dict = Depends(get_active_session_context), 
     session: Session = Depends(get_session)
 ):
+    if not context['company']:
+        raise HTTPException(status_code=400, detail="Missing company context for request.")
+        
     request.company_id = context['company'].id
     request.created_by = context['user'].id
     session.add(request)
-    session.commit()
+    try:
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database commit failed: {str(e)}")
     session.refresh(request)
     return request
 
