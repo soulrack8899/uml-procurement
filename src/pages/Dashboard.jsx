@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, CheckCircle2, User, Gavel, Banknote, ShieldCheck, FileText } from 'lucide-react'
+import { ArrowRight, CheckCircle2, User, Gavel, Banknote, ShieldCheck, FileText, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { procurementApi } from '../services/api'
 import { useCompany } from '../App'
@@ -159,7 +159,19 @@ const RequestRow = ({ req, idx, isMobile, onClick }) => {
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--outline)' }}>#{req.id}</span>
           </div>
           <h4 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--on-surface)' }}>{req.title}</h4>
-          <p style={{ fontSize: '0.875rem', color: 'var(--outline)' }}>{req.vendor_name}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--outline)' }}>{req.vendor_name}</p>
+            {req.total_amount > 1000 && !req.quotation_url && (
+              <span style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--error)', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--error-container)', padding: '2px 8px', borderRadius: '4px' }}>
+                <AlertTriangle size={10} /> MISSING QUOTATION
+              </span>
+            )}
+            {req.quotation_url && (
+              <span style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--tertiary)', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--tertiary-fixed)', padding: '2px 8px', borderRadius: '4px' }}>
+                <FileText size={10} /> QUOTED
+              </span>
+            )}
+          </div>
         </div>
         <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
            <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)' }}>RM {req.total_amount.toLocaleString()}</p>

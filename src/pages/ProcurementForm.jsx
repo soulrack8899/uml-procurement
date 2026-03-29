@@ -191,10 +191,9 @@ const ProcurementForm = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', paddingTop: '3rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
-               
-               <div style={{ flex: 1, width: '100%', maxWidth: isMobile ? '100%' : '50%' }}>
-                  <label style={S.label}>Critical Documentation</label>
+            <div style={{ marginBottom: '4rem' }}>
+                <label style={S.label}>Critical Documentation</label>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
                   <motion.div 
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
@@ -228,8 +227,20 @@ const ProcurementForm = () => {
                         </p>
                      </div>
                   </motion.div>
-               </div>
+                  
+                  <div style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(194,198,211,0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <Info size={16} style={{ color: 'var(--primary)' }} />
+                      <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', margin: 0 }}>Requirement</p>
+                    </div>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', margin: 0 }}>
+                      Governance requires a verified supplier quotation for any expenditure exceeding <strong>RM 1,000.00</strong>. Failure to attach may delay approval.
+                    </p>
+                  </div>
+                </div>
+            </div>
 
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'flex-end', alignItems: 'center', gap: '2rem', paddingTop: '3rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
                <div style={{ display: 'flex', gap: '1.5rem', width: isMobile ? '100%' : 'auto' }}>
                   <button type="button" style={{ padding: '1rem 2rem', background: 'transparent', border: 'none', color: 'var(--outline)', fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
                   <button

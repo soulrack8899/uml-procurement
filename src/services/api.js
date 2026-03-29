@@ -58,6 +58,16 @@ export const procurementApi = {
     return response.json();
   },
   
+  updateRequest: async (id, data) => {
+    const response = await fetch(`${API_BASE_URL}/requests/${id}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Update failed");
+    return response.json();
+  },
+  
   createRequest: async (data) => {
     const response = await fetch(`${API_BASE_URL}/requests/`, {
       method: "POST",

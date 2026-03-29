@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, CheckCircle, XCircle, FileText, Download, AlertTriangle, ChevronRight, ExternalLink } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, FileText, Download, AlertTriangle, ChevronRight, ExternalLink, Plus, Loader2 } from 'lucide-react'
 import { procurementApi } from '../services/api'
 import TimelineView from '../components/TimelineView'
 import { useCompany, getStatusChipClass } from '../App'
@@ -14,6 +14,8 @@ const RequestDetails = () => {
   const [auditLogs, setAuditLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [transitioning, setTransitioning] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -36,6 +38,22 @@ const RequestDetails = () => {
       fetchData()
     } catch (err) { alert(err.message) }
     finally { setTransitioning(null) }
+  }
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    
+    setUploading(true)
+    try {
+      const result = await procurementApi.uploadFile(file)
+      await procurementApi.updateRequest(id, { quotation_url: result.url })
+      fetchData()
+    } catch (err) {
+      alert("Failed to upload quotation: " + err.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   if (loading) return (
@@ -157,26 +175,58 @@ const RequestDetails = () => {
           <div className="surface-card" style={{ padding: '1.75rem' }}>
              <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Evidence & Quotations</h4>
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
+                
                 {request.quotation_url ? (
-                  <a 
-                    href={request.quotation_url.startsWith('http') ? request.quotation_url : `https://uml-procurement-internal-production.up.railway.app${request.quotation_url}`} 
-                    target="_blank" 
-                    rel="noreferrer"
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <a 
+                      href={request.quotation_url.startsWith('http') ? request.quotation_url : `https://uml-procurement-internal-production.up.railway.app${request.quotation_url}`} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      style={{ 
+                        display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', 
+                        background: 'var(--secondary-container)', color: 'var(--on-secondary-container)', 
+                        borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 800, fontSize: '0.875rem' 
+                      }}
+                    >
+                      <FileText size={18} />
+                      View Supplier Quotation
+                      <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
+                    </a>
+                    <button 
+                      onClick={() => fileInputRef.current.click()}
+                      disabled={uploading}
+                      style={{ 
+                        fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', 
+                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                        padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      {uploading ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                      Replace Document
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={uploading}
                     style={{ 
-                      display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', 
-                      background: 'var(--secondary-container)', color: 'var(--on-secondary-container)', 
-                      borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 800, fontSize: '0.875rem' 
+                      width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', 
+                      padding: '1rem', background: 'var(--surface-container-low)', 
+                      borderRadius: 'var(--radius-sm)', border: '2px dashed var(--outline-variant)',
+                      color: 'var(--primary)', cursor: 'pointer', textAlign: 'left',
+                      transition: 'all 0.2s'
                     }}
                   >
-                    <FileText size={18} />
-                    View Supplier Quotation
-                    <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
-                  </a>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)', opacity: 0.6 }}>
-                    <FileText size={18} />
-                    <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>No quotation attached</span>
-                  </div>
+                    {uploading ? (
+                      <Loader2 className="animate-spin" size={18} />
+                    ) : (
+                      <Plus size={18} />
+                    )}
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>
+                      {uploading ? "Uploading..." : "Add Quotation Document"}
+                    </span>
+                  </button>
                 )}
                 
                 {request.status === 'PO_ISSUED' && (
