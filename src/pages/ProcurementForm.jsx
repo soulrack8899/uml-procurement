@@ -40,8 +40,12 @@ const ProcurementForm = () => {
         }))
       }
       const res = await procurementApi.createRequest(requestData)
-      await procurementApi.transitionStatus(res.id, 'PENDING_MANAGER', 'System', 'REQUESTER')
-      navigate(`/request/${res.id}`)
+      if (res && res.id) {
+        await procurementApi.transitionStatus(res.id)
+        navigate(`/request/${res.id}`)
+      } else {
+        throw new Error("Server returned success but no Request ID was created.")
+      }
     } catch (err) {
       alert(err.message)
     } finally {

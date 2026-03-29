@@ -81,9 +81,9 @@ class ProcurementRequest(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     company: Company = Relationship(back_populates="requests")
-    items: List["LineItem"] = Relationship(back_populates="request")
-    files: List["FileMetadata"] = Relationship(back_populates="request")
-    audit_logs: List["AuditLog"] = Relationship(back_populates="request")
+    items: List["LineItem"] = Relationship(back_populates="request", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    files: List["FileMetadata"] = Relationship(back_populates="request", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    audit_logs: List["AuditLog"] = Relationship(back_populates="request", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
 class LineItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -91,7 +91,7 @@ class LineItem(SQLModel, table=True):
     quantity: int
     unit_price: float
     total_price: float
-    request_id: int = Field(foreign_key="procurementrequest.id")
+    request_id: Optional[int] = Field(default=None, foreign_key="procurementrequest.id")
     
     request: Optional[ProcurementRequest] = Relationship(back_populates="items")
 

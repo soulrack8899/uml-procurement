@@ -64,6 +64,10 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Creation failed");
+    }
     return response.json();
   },
   
