@@ -104,61 +104,8 @@ const Login = ({ onLogin }) => {
           </div>
         )}
 
-        {useQuickAccess ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Fingerprint size={18} style={{ color: 'var(--primary)' }} />
-                  <h2 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Identify Authorization</h2>
-               </div>
-               <button onClick={() => setUseQuickAccess(false)} style={{ fontSize: '0.625rem', fontWeight: 900, background: 'none', border: 'none', color: 'var(--secondary)', cursor: 'pointer', textDecoration: 'underline' }}>USE CREDENTIALS</button>
-            </div>
-            
-            {mockUsers.map((user) => (
-              <motion.button
-                key={user.id}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleQuickLogin(user)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '1.25rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--outline-variant-low)',
-                  background: 'var(--surface-container-low)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  width: '100%',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                <div style={{ 
-                  width: 48, height: 48, borderRadius: 'var(--radius-pill)', 
-                  background: user.role === 'GLOBAL_ADMIN' ? 'var(--primary)' : 'var(--surface-container-high)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: user.role === 'GLOBAL_ADMIN' ? 'var(--on-primary)' : 'var(--primary)',
-                  flexShrink: 0
-                }}>
-                  <UserCircle size={28} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '1.125rem', color: 'var(--primary)' }}>{user.name}</div>
-                  <div style={{ fontSize: '0.625rem', color: 'var(--outline)', textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.08em' }}>
-                    {user.role.replace('_', ' ')} • {user.description}
-                  </div>
-                </div>
-                <ChevronRight size={20} style={{ color: 'var(--outline)', opacity: 0.3 }} />
-              </motion.button>
-            ))}
-          </div>
-        ) : (
-          <form onSubmit={handleManualLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-               <h2 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase' }}>Login Terminal</h2>
-               <button type="button" onClick={() => setUseQuickAccess(true)} style={{ fontSize: '0.625rem', fontWeight: 900, background: 'none', border: 'none', color: 'var(--secondary)', cursor: 'pointer' }}>QUICK ACCESS</button>
-             </div>
+        <form onSubmit={handleManualLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+             <h2 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Login Terminal</h2>
              
              <div>
                <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Work Email</label>
@@ -179,17 +126,7 @@ const Login = ({ onLogin }) => {
              <button disabled={isLoading} className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                 {isLoading ? 'Verifying...' : <>Authorize Access <ArrowRight size={18} /></>}
              </button>
-
-             <div style={{ background: 'var(--surface-container-low)', padding: '1rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <Info size={16} style={{ color: 'var(--primary)', marginTop: '0.125rem' }} />
-                <p style={{ fontSize: '0.75rem', color: 'var(--outline)', lineHeight: 1.5 }}>
-                  <strong>Global Admin</strong> credentials: <br/>
-                  Email: <code>admin@umlab.sarawak.my</code> <br/>
-                  Password: <code>password123</code>
-                </p>
-             </div>
-          </form>
-        )}
+        </form>
 
         <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(194,198,211,0.1)', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--outline)' }}>

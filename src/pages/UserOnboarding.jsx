@@ -20,6 +20,8 @@ const UserOnboarding = () => {
     role: 'REQUESTER'
   })
 
+  const { activeRole, currentCompany } = useCompany()
+
   useEffect(() => {
     fetchCompanies()
   }, [])
@@ -27,8 +29,12 @@ const UserOnboarding = () => {
   const fetchCompanies = async () => {
     try {
       const data = await procurementApi.getCompanies()
-      setCompanies(data)
-      if (data.length > 0) setFormData(prev => ({ ...prev, company_id: data[0].id }))
+      // If user is just an ADMIN, they can only onboard for their own company
+      const filteredCompanies = activeRole === 'GLOBAL_ADMIN' ? data : data.filter(c => c.id === currentCompany?.id)
+      setCompanies(filteredCompanies)
+      if (filteredCompanies.length > 0) {
+        setFormData(prev => ({ ...prev, company_id: filteredCompanies[0].id }))
+      }
     } catch (err) {
       console.error("Failed to load ecosystem entities", err)
     }
@@ -42,7 +48,7 @@ const UserOnboarding = () => {
       setShowSuccess(true)
       setTimeout(() => {
         setShowSuccess(false)
-        setFormData({ ...formData, name: '', email: '' })
+        setFormData(prev => ({ ...prev, name: '', email: '' }))
       }, 3000)
     } catch (err) {
       alert(err.message)
@@ -51,13 +57,22 @@ const UserOnboarding = () => {
     }
   }
 
-  const roles = [
+  // Governance filtered roles
+  const allRoles = [
     { id: 'REQUESTER', name: 'Staff (Requester)', desc: 'Standard personnel. Can initiate procurement requests.' },
     { id: 'MANAGER', name: 'Manager (Approver)', desc: 'Entity oversight. Can approve requests within thresholds.' },
+    { id: 'FINANCE', name: 'Finance Officer', desc: 'Financial compliance. Manages PO issuance and payments.' },
     { id: 'DIRECTOR', name: 'Director (Board)', desc: 'Highest authority. Required for high-value strategic spend.' },
-    { id: 'ADMIN', name: 'System Admin (Procurement)', desc: 'Governance lead. Manages companies, vendors, and audit logs.' },
-    { id: 'GLOBAL_ADMIN', name: 'Global Superuser', desc: 'SaaS ecosystem master. Cross-entity visibility and provisioning.' }
+    { id: 'ADMIN', name: 'System Admin (Procurement)', desc: 'Governance lead. Manages company users and vendors.' }
   ]
+
+  const availableRoles = allRoles.filter(role => {
+    // Only GLOBAL_ADMIN can provision ADMIN/DIRECTOR
+    if (['ADMIN', 'DIRECTOR'].includes(role.id)) {
+      return activeRole === 'GLOBAL_ADMIN'
+    }
+    return true
+  })
 
   const S = {
     card: { background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(194,198,211,0.2)', overflow: 'hidden' },
@@ -123,7 +138,7 @@ const UserOnboarding = () => {
             <div>
               <label style={S.label}>Governance Role Hierarchy</label>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
-                {roles.map(role => (
+                {availableRoles.map(role => (
                    <div key={role.id} onClick={() => setFormData({ ...formData, role: role.id })} style={{ 
                      padding: '1rem', borderRadius: 'var(--radius-sm)', border: `2px solid ${formData.role === role.id ? 'var(--primary)' : 'transparent'}`,
                      background: formData.role === role.id ? 'var(--primary-container)' : 'var(--surface-container-low)', cursor: 'pointer', transition: 'all 0.2s', position: 'relative'
