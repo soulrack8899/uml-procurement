@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from models import (
     engine, create_db_and_tables, ProcurementRequest, LineItem, 
     FileMetadata, AuditLog, StatusEnum, UserRole, Company, 
-    CompanySettings, PettyCash, PettyCashStatus, User, TenantAccess, LineItem
+    CompanySettings, PettyCash, PettyCashStatus, User, TenantAccess
 )
 from services.po_generator import generate_po_pdf
 from pydantic import BaseModel
@@ -275,6 +275,43 @@ class ApprovalEngine:
             return StatusEnum.PAID
         return None
 
+    @staticmethod
+    def get_role_capabilities(role: UserRole, threshold: float):
+        """Standardized capability and limit map for UI adaptation"""
+        capabilities = {
+            UserRole.GLOBAL_ADMIN: {
+                "label": "System Master",
+                "limit": "Unlimited",
+                "permissions": ["all_access", "provision_admins", "provision_entities"]
+            },
+            UserRole.ADMIN: {
+                "label": "Entity Admin",
+                "limit": "Unlimited (Override)",
+                "permissions": ["manage_users", "manage_settings", "override_approvals"]
+            },
+            UserRole.DIRECTOR: {
+                "label": "Executive Director",
+                "limit": "Unlimited",
+                "permissions": ["final_approval", "high_value_auth"]
+            },
+            UserRole.MANAGER: {
+                "label": "Operational Manager",
+                "limit": f"RM {threshold:,.2f}",
+                "permissions": ["standard_approval"]
+            },
+            UserRole.FINANCE: {
+                "label": "Finance Officer",
+                "limit": "N/A",
+                "permissions": ["po_issuance", "payment_disbursement"]
+            },
+            UserRole.REQUESTER: {
+                "label": "Requester",
+                "limit": "RM 0.00",
+                "permissions": ["create_requests"]
+            }
+        }
+        return capabilities.get(role, {"label": "Unknown", "limit": "0.00", "permissions": []})
+
 
 @app.get("/vendors/")
 def list_vendors(context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
@@ -299,15 +336,27 @@ def list_vendors(context: dict = Depends(get_active_session_context), session: S
 
 
 @app.get("/session/whoami")
-def whoami(context: dict = Depends(get_active_session_context)):
-    """Surfaces contextual role for UI adaptation"""
+def whoami(context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
+    """Surfaces contextual role and capability limits for UI adaptation"""
+    settings = session.exec(select(CompanySettings).where(
+        CompanySettings.company_id == context['company'].id
+    )).first() if context['company'] else None
+    
+    threshold = settings.approval_threshold if settings else 5000.0
+    capabilities = ApprovalEngine.get_role_capabilities(context['active_role'], threshold)
+    
     return {
         "user_id": context['user'].id,
         "user_name": context['user'].name,
         "company_id": context['company'].id if context['company'] else None,
-        "company_name": context['company'].name if context['company'] else "SaaS Master Hub",
+        "company_name": context['company'].name if context['company'] else "ProcuSure SaaS Hub",
         "active_role": context['active_role'],
-        "global_role": context['user'].global_role
+        "global_role": context['user'].global_role,
+        "role_info": capabilities,
+        "governance": {
+            "threshold": threshold,
+            "currency": "RM"
+        }
     }
 
 @app.post("/session/login")
@@ -540,25 +589,55 @@ def onboard_user(
     context: dict = Depends(get_active_session_context),
     session: Session = Depends(get_session)
 ):
-    """Adds a new internal identity to the ecosystem and maps them to an entity"""
-    # Permission check: Only Global Admins or Company Admins can onboard
-    if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]:
+    """
+    Adds a new internal identity. 
+    GOVERNANCE RULES:
+    1. GLOBAL_ADMIN cannot be registered via API (reserved for system owners/Karl).
+    2. Only GLOBAL_ADMIN can provision new COMPANY_ADMIN or DIRECTOR roles across any entity.
+    3. COMPANY_ADMIN can only onboard REQUESTER, MANAGER, or FINANCE within their own entity.
+    """
+    requester_role = context['active_role']
+    
+    # 1. Protect GLOBAL_ADMIN role
+    if data.role == UserRole.GLOBAL_ADMIN:
+         raise HTTPException(status_code=403, detail="The Global Admin role is immutable and restricted to system owners.")
+
+    # 2. Restrict high-privilege/executive role assignment
+    if data.role in [UserRole.ADMIN, UserRole.DIRECTOR]:
+        if requester_role != UserRole.GLOBAL_ADMIN:
+            raise HTTPException(
+                status_code=403, 
+                detail=f"Authorization Failure: Only Global Admin can provision {data.role} roles."
+            )
+    
+    # 3. Standard permission check
+    if requester_role not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]:
          raise HTTPException(status_code=403, detail="Unauthorized for identity provisioning.")
 
-    # Create user
+    # 4. Scope Enforcement: Company Admins cannot register users for other companies
+    target_company_id = data.company_id if data.company_id else context['company'].id if context['company'] else None
+    if requester_role == UserRole.ADMIN and data.company_id and data.company_id != context['company'].id:
+         raise HTTPException(
+             status_code=403, 
+             detail="Authorization Failure: Entity Admins can only onboard users for their own organization."
+         )
+
+    # Proceed with creation
     new_user = User(name=data.name, email=data.email, password=data.password)
     session.add(new_user)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Identity creation failed (Identity might already exist).")
+        
     session.refresh(new_user)
     
-    # Map to company if provided
-    co_id = data.company_id if data.company_id else context['company'].id if context['company'] else None
-    
-    if co_id:
-        session.add(TenantAccess(user_id=new_user.id, company_id=co_id, role=data.role))
+    if target_company_id:
+        session.add(TenantAccess(user_id=new_user.id, company_id=target_company_id, role=data.role))
         session.commit()
         
-    return {"status": "User Provisioned", "id": new_user.id}
+    return {"status": "User Provisioned", "id": new_user.id, "active_entity_id": target_company_id}
 
 @app.patch("/companies/{company_id}", response_model=Company)
 def update_company(
