@@ -21,5 +21,5 @@ COPY . .
 EXPOSE 8080
 
 # Run the app using Gunicorn (production grade)
-# Use a single worker for SQLite on Railway to avoid database locking/contention issues.
-CMD ["gunicorn", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "main:app", "--bind", "0.0.0.0:8080"]
+# Bind to the dynamic PORT environment variable for platform compatibility (like Railway)
+CMD ["sh", "-c", "gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT"]

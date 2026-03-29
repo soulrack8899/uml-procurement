@@ -42,18 +42,10 @@ class UserCreate(BaseModel):
 app = FastAPI(title="UMLAB SaaS Master API")
 
 # Enable CORS for React frontend (Vercel) and local development
-origins = [
-    "https://uml-procurement-internal.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8000",
-    "https://uml-procurement-internal-production.up.railway.app"
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins + ["*"],
-    allow_credentials=False, # Set to True once we use cookies/auth headers
+    allow_origins=["*"],  # Simplified for global access, can be restricted later if needed
+    allow_credentials=True, # Set to True to handle internal sessions
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -144,15 +136,15 @@ def on_startup():
              # Mapping DIFFERENT ROLES for DIFFERENT COMPANIES
              # Manager in UMLAB
              session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.MANAGER))
-             # Finance in Alfa Mount
-             session.add(TenantAccess(user_id=karlos.id, company_id=alfa.id, role=UserRole.FINANCE))
+             # Finance in Merakai
+             session.add(TenantAccess(user_id=karlos.id, company_id=merakai.id, role=UserRole.FINANCE))
              
              # Case C: Assign Johor Partner ONLY to UMLAB Sarawak as Director
              session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
              
-             # Case A: Alfa Mount pending request for RM 10,000
+             # Case A: Merakai pending request for RM 10,000
              request_a = ProcurementRequest(
-                 company_id=alfa.id,
+                 company_id=merakai.id,
                  created_by=karlos.id,
                  title="Enterprise Server Rack",
                  vendor_name="Dell Emc",
