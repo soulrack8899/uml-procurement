@@ -209,6 +209,14 @@ h1, h2, h3, h4, h5, h6,
   padding: 1.5rem;
   /* Stitch: "Ghost Border" at 15% opacity */
   box-shadow: 0 0 0 1px rgba(194, 198, 211, 0.15);
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 640px) {
+  .surface-card {
+    padding: 1rem;
+    border-radius: 0;
+  }
 }
 
 .surface-section {
@@ -438,3 +446,47 @@ h1, h2, h3, h4, h5, h6,
 .border-outline-variant-low { border-color: rgba(194, 198, 211, 0.15) !important; }
 
 .on-tertiary-fixed-variant { color: var(--on-tertiary-fixed-variant) !important; }
+
+/* ============================================================
+   Responsive Layout Utilities
+   ============================================================ */
+
+@media (max-width: 1024px) {
+  :root {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+  
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .main-content-wrapper {
+    padding: 1rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .surface-card {
+    padding: 1rem;
+    border-radius: 0;
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
