@@ -379,6 +379,8 @@ async def upload_file(file: UploadFile = File(...)):
 
 # Serve uploads directory
 from fastapi.staticfiles import StaticFiles
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/requests/", response_model=List[ProcurementRequest])
