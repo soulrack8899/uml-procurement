@@ -101,16 +101,23 @@ def on_startup():
              umlab = Company(name="UMLAB Sarawak", domain="umlab.sarawak.my")
              session.add(umlab)
              
-             # Company B
-             alfa = Company(name="Alfa Mount", domain="alfamount.my")
-             session.add(alfa)
+             # Company B (Replacement for Alfa Mount)
+             merakai = Company(name="Merakai Indah Sdn Bhd", domain="merakai.indah.my")
+             session.add(merakai)
+             
+             # Company C
+             quantum = Company(name="Quantum Sense Sdn Bhd", domain="quantumsense.my")
+             session.add(quantum)
+             
              session.commit()
              session.refresh(umlab)
-             session.refresh(alfa)
+             session.refresh(merakai)
+             session.refresh(quantum)
              
              # Default settings
              session.add(CompanySettings(company_id=umlab.id, approval_threshold=5000.0))
-             session.add(CompanySettings(company_id=alfa.id, approval_threshold=10000.0))
+             session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
+             session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
              
              # Global Admin User
              karlos = User(

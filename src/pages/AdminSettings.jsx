@@ -196,7 +196,7 @@ const AdminSettings = () => {
       <section style={{ background: 'var(--primary)', color: 'white', padding: isMobile ? '1.5rem' : '2.5rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
          <div>
             <h4 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Cross-Entity Deployment</h4>
-            <p style={{ fontSize: '0.875rem', opacity: 0.8, maxWidth: '30rem' }}>Managing <strong style={{ textDecoration: 'underline' }}>{currentCompany?.name}</strong>. Switch to cluster oversight for Alfa Mount or HPSB.</p>
+            <p style={{ fontSize: '0.875rem', opacity: 0.8, maxWidth: '30rem' }}>Managing <strong style={{ textDecoration: 'underline' }}>{currentCompany?.name}</strong>. Switch to cluster oversight for Merakai or Quantum Sense.</p>
          </div>
          <button style={{ padding: '0.75rem 2rem', background: 'white', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, cursor: 'pointer' }}>
             Switch Entity Hub
