@@ -170,7 +170,34 @@ class ApprovalEngine:
             return StatusEnum.PAID
         return None
 
+# --- Global Registry (Tenant Discovery) ---
+
+@app.get("/companies/", response_model=List[Company])
+def list_companies(session: Session = Depends(get_session)):
+    """Fetches all companies for the global context switcher"""
+    return session.exec(select(Company)).all()
+
+@app.get("/vendors/")
+def list_vendors(context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
+    """Fetches unique vendors currently active in the tenant context"""
+    requests = session.exec(select(ProcurementRequest).where(
+        ProcurementRequest.company_id == context['company'].id
+    )).all()
+    
+    unique_vendors = {}
+    for r in requests:
+        if r.vendor_id not in unique_vendors:
+            unique_vendors[r.vendor_id] = {
+                "id": r.vendor_id,
+                "name": r.vendor_name,
+                "total_volume": 0
+            }
+        unique_vendors[r.vendor_id]["total_volume"] += r.total_amount
+        
+    return list(unique_vendors.values())
+
 # --- Tenant Aware Endpoints ---
+
 
 @app.get("/session/whoami")
 def whoami(context: dict = Depends(get_active_session_context)):
@@ -276,6 +303,47 @@ def transition_status(
 @app.get("/companies/", response_model=List[Company])
 def list_companies(session: Session = Depends(get_session)):
     return session.exec(select(Company)).all()
+
+@app.post("/companies/onboard", response_model=Company)
+def onboard_company(
+    company: Company, 
+    session: Session = Depends(get_session)
+):
+    """Provisions a new enterprise tenant and default settings"""
+    session.add(company)
+    session.commit()
+    session.refresh(company)
+    
+    # Initialize default settings
+    settings = CompanySettings(company_id=company.id)
+    session.add(settings)
+    
+    # Map the current user as an ADMIN for the new company by default (mocking current user 1)
+    session.add(TenantAccess(user_id=1, company_id=company.id, role=UserRole.ADMIN))
+    
+    session.commit()
+    session.refresh(company)
+    return company
+
+@app.patch("/companies/{company_id}", response_model=Company)
+def update_company(
+    company_id: int,
+    company_update: dict,
+    session: Session = Depends(get_session)
+):
+    """Updates company profile metadata including logo_url"""
+    company = session.get(Company, company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    
+    for key, value in company_update.items():
+        if hasattr(company, key):
+            setattr(company, key, value)
+            
+    session.add(company)
+    session.commit()
+    session.refresh(company)
+    return company
 
 # --- Petty Cash (Contextual Role Check) ---
 

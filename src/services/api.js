@@ -25,6 +25,26 @@ export const procurementApi = {
     return response.json();
   },
   
+  onboardCompany: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/companies/onboard`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Onboarding failed");
+    return response.json();
+  },
+
+  updateCompany: async (id, data) => {
+    const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Update failed");
+    return response.json();
+  },
+  
   // --- Procurement ---
   getRequests: async () => {
     const response = await fetch(`${API_BASE_URL}/requests/`, { headers: getHeaders() });
