@@ -42,7 +42,11 @@ class UserCreate(BaseModel):
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
-# Define origins for CORS - specified origins are REQUIRED when allow_credentials is True
+# Define origins for CORS
+# Using regex allows for dynamically matching preview deployments and subdomains
+allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|http://localhost:.*"
+
+# Define origins for CORS
 origins = [
     "https://uml-procurement-internal.vercel.app",
     "https://uml-procurement-internal-production.up.railway.app",
@@ -51,31 +55,46 @@ origins = [
     "http://localhost:8000"
 ]
 
+# Add variants for common deployment URLs
+origins += [
+    "https://www.uml-procurement-internal.vercel.app",
+    "https://procusure.vercel.app", # Placeholder for future custom domain
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True, 
+    allow_origins=["*"], # For PoC on Railway, setting to "*" to bypass CORS blocks 
+    allow_credentials=False, # Use False when origin is "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "service": "UMLAB SaaS Master API", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "ok", "service": "ProcuSure SaaS Master API", "timestamp": datetime.utcnow().isoformat()}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    error_detail = traceback.format_exc()
+    print(f"CRITICAL ERROR: {error_detail}")
+    
     # Ensure unhandled errors return valid CORS headers to prevent "Missing Header" errors in browser
-    origin = request.headers.get("Origin", "*")
+    origin = request.headers.get("Origin")
+    # If the origin is missing or not allowed, fallback to a safe default if needed, 
+    # but for error responses we want to be as permissive as possible to allow the frontend to see the error.
+    
+    headers = {
+        "Access-Control-Allow-Origin": origin if origin else "*",
+        "Access-Control-Allow-Credentials": "true" if origin else "false",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*"
+    }
+    
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error", "exception": str(exc)},
-        headers={
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true" if origin != "*" else "false",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*"
-        }
+        content={"detail": "Internal Server Error", "exception": str(exc), "traceback": error_detail if os.getenv("DEBUG") else None},
+        headers=headers
     )
 
 @app.on_event("startup")
@@ -91,7 +110,8 @@ def on_startup():
                 "ALTER TABLE procurementrequest ADD COLUMN status VARCHAR DEFAULT 'DRAFT'",
                 "ALTER TABLE procurementrequest ADD COLUMN quotation_url VARCHAR",
                 "ALTER TABLE user ADD COLUMN email VARCHAR",
-                "ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'"
+                "ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'",
+                "ALTER TABLE pettycash ADD COLUMN description VARCHAR DEFAULT 'Petty Cash Claim'"
             ]
             for m in migrations:
                 try:
@@ -564,9 +584,24 @@ def update_company(
 def list_petty_cash(context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
     return session.exec(select(PettyCash).where(PettyCash.company_id == context['company'].id)).all()
 
+@app.post("/petty-cash/", response_model=PettyCash)
+def create_petty_cash(
+    pc: PettyCash, 
+    context: dict = Depends(get_active_session_context), 
+    session: Session = Depends(get_session)
+):
+    pc.company_id = context['company'].id
+    pc.requester_id = context['user'].id
+    session.add(pc)
+    session.commit()
+    session.refresh(pc)
+    return pc
+
 @app.post("/petty-cash/{pc_id}/approve")
 def approve_pc(pc_id: int, context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
     pc = session.exec(select(PettyCash).where(PettyCash.id == pc_id, PettyCash.company_id == context['company'].id)).first()
+    if not pc:
+        raise HTTPException(status_code=404, detail="Petty Cash entry not found.")
     if context['active_role'] not in [UserRole.MANAGER, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Managerial clearance required.")
     pc.status = PettyCashStatus.APPROVED
@@ -577,6 +612,8 @@ def approve_pc(pc_id: int, context: dict = Depends(get_active_session_context), 
 @app.post("/petty-cash/{pc_id}/disburse")
 def disburse_pc(pc_id: int, context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
     pc = session.exec(select(PettyCash).where(PettyCash.id == pc_id, PettyCash.company_id == context['company'].id)).first()
+    if not pc:
+        raise HTTPException(status_code=404, detail="Petty Cash entry not found.")
     if context['active_role'] not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.MANAGER]:
          raise HTTPException(status_code=403, detail="Finance/Admin/Manager authorization required for cash payout.")
     pc.status = PettyCashStatus.DISBURSED

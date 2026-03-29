@@ -115,6 +115,7 @@ class PettyCash(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(foreign_key="company.id")
     requester_id: int = Field(foreign_key="user.id")
+    description: str = Field(default="Petty Cash Claim")
     amount: float
     receipt_url: Optional[str] = None
     status: PettyCashStatus = Field(default=PettyCashStatus.SUBMITTED)

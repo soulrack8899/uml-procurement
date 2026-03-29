@@ -29,7 +29,7 @@ const PettyCashDashboard = () => {
       await procurementApi.createPettyCash({
         description: form.description,
         amount: parseFloat(form.amount),
-        receipt_ref: form.receipt_ref || 'N/A'
+        receipt_url: form.receipt_ref || 'N/A'
       })
       setShowForm(false)
       setForm({ description: '', amount: '', receipt_ref: '' })
@@ -142,10 +142,10 @@ const PettyCashDashboard = () => {
               </div>
             ) : requests.map((req, i) => (
               <motion.div key={req.id} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', padding: isMobile ? '1rem' : '1.25rem 2rem', background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(194,198,211,0.2)', gap: isMobile ? '1rem' : '2rem' }}>
-                 <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1 }}>
                     <h4 style={{ fontWeight: 800, fontSize: '1.125rem', color: 'var(--primary)' }}>{req.description}</h4>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 700 }}>{new Date(req.created_at).toLocaleDateString()} • {req.receipt_ref}</p>
-                 </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 700 }}>{new Date(req.created_at).toLocaleDateString()} • {req.receipt_url}</p>
+                  </div>
                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: isMobile ? '100%' : 'auto', gap: '2rem' }}>
                     <p style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--primary)' }}>RM {req.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
