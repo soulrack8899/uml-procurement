@@ -47,6 +47,9 @@ const Dashboard = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '3rem', paddingBottom: '4rem' }}>
       
+      {/* Welcome & Onboarding Guide */}
+      <WelcomeGuide activeRole={activeRole} isMobile={isMobile} />
+
       {/* Tectonic Header Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
         
@@ -195,5 +198,98 @@ const ActivityItem = ({ time, title, detail, active }) => (
     </div>
   </div>
 );
+
+const WelcomeGuide = ({ activeRole, isMobile }) => {
+  const [dismissed, setDismissed] = useState(localStorage.getItem('guideDismissed') === 'true')
+  if (dismissed) return null;
+
+  const roleGuides = {
+    GLOBAL_ADMIN: {
+      title: "System Master Command",
+      desc: "As the Global Admin, you are the final authority. Oversee all entities, provision new company admins, and ensure global governance standards are met across the ProcuSure ecosystem.",
+      steps: ["Register new Company entities", "Provision Entity Admins and Directors", "Monitor global audit logs"]
+    },
+    ADMIN: {
+      title: "Entity Governance Lead",
+      desc: "Welcome to your organization's control center. You manage company settings, internal user onboarding, and vendor directories for your specific organization.",
+      steps: ["Onboard Internal Staff", "Add/Update Vendor Directory", "Configure Approval Thresholds"]
+    },
+    DIRECTOR: {
+      title: "Executive Authorization",
+      desc: "You are responsible for high-value strategic spend. Your clearance is required for all procurements exceeding company thresholds (e.g., > RM 5,000).",
+      steps: ["Review high-value requests", "Authorized overrides", "Executive expenditure trends"]
+    },
+    MANAGER: {
+      title: "Operational Approval",
+      desc: "You oversee day-to-day unit spending. Review and approve standard procurement requests from your team within defined limits.",
+      steps: ["Review standard requests", "Track team procurement metrics", "Authorize petty cash"]
+    },
+    REQUESTER: {
+      title: "Expedited Procurement",
+      desc: "Efficiency starts here. Initiate new procurement requests or claim petty cash for operational needs. Track your items through the approval cycle in real-time.",
+      steps: ["Submit new Request", "Attach Quotations for > RM 1k", "Track status in Dashboard"]
+    }
+  }
+
+  const guide = roleGuides[activeRole] || roleGuides.REQUESTER;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }} 
+      animate={{ opacity: 1, y: 0 }}
+      style={{ 
+        background: 'var(--surface-container-high)', border: '1px solid rgba(194,198,211,0.2)', 
+        borderRadius: 'var(--radius-xl)', padding: '2.5rem', 
+        position: 'relative', overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.05)'
+      }}
+    >
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+          <ShieldCheck size={24} style={{ color: 'var(--primary)' }} />
+          <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+            Welcome to ProcuSure • {guide.title}
+          </h2>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', gap: '2rem' }}>
+           <div style={{ gridColumn: isMobile ? 'auto' : 'span 7' }}>
+             <p style={{ fontSize: '0.925rem', color: 'var(--on-surface-variant)', lineHeight: 1.6, marginBottom: '1.5rem' }}>{guide.desc}</p>
+             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                {guide.steps.map((step, idx) => (
+                  <div key={idx} style={{ padding: '0.5rem 1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant-low)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>
+                    <CheckCircle2 size={14} /> {step}
+                  </div>
+                ))}
+             </div>
+           </div>
+
+           <div style={{ gridColumn: isMobile ? 'auto' : 'span 5', borderLeft: isMobile ? 'none' : '1px solid var(--outline-variant-low)', paddingLeft: isMobile ? 0 : '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h4 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--outline)', letterSpacing: '0.1em' }}>Spending Lifecycle</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                 <FlowStep active icon={<FileText size={14}/>} label="Submission" />
+                 <FlowStep active icon={<Gavel size={14}/>} label="Management Review" />
+                 <FlowStep icon={<Banknote size={14}/>} label="Finance / PO Generation" />
+                 <FlowStep icon={<CheckCircle2 size={14}/>} label="Payment Distribution" />
+              </div>
+           </div>
+        </div>
+      </div>
+
+      <button onClick={() => { localStorage.setItem('guideDismissed', 'true'); setDismissed(true); }} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', border: 'none', background: 'none', color: 'var(--outline)', cursor: 'pointer', fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+        Dismiss Guide <ArrowRight size={14} />
+      </button>
+    </motion.div>
+  )
+}
+
+const FlowStep = ({ active, icon, label }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: active ? 1 : 0.4 }}>
+     <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-pill)', background: active ? 'var(--primary)' : 'var(--outline-variant-low)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: active ? 'white' : 'var(--outline)' }}>{icon}</div>
+     <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: active ? 'var(--primary)' : 'var(--outline)' }}>{label}</span>
+     </div>
+  </div>
+)
 
 export default Dashboard;
