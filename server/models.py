@@ -78,6 +78,7 @@ class ProcurementRequest(SQLModel, table=True):
     vendor_id: str
     total_amount: float
     status: StatusEnum = Field(default=StatusEnum.DRAFT)
+    quotation_url: Optional[str] = None
     created_by: Optional[int] = Field(default=None, foreign_key="user.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

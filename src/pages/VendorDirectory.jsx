@@ -1,20 +1,70 @@
-import React from 'react'
-import { motion } from 'framer-motion'
-import { Search, Filter, Plus, Mail, Phone, MapPin, Globe, ArrowRight, ChevronRight } from 'lucide-react'
+import React, { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Filter, Plus, Mail, Phone, MapPin, Globe, ArrowRight, ChevronRight, X, ShieldCheck } from 'lucide-react'
 import { useCompany } from '../App'
 
 const VendorDirectory = () => {
   const { isMobile } = useCompany()
-  const vendors = [
+  const [showRegister, setShowRegister] = useState(false)
+  
+  const [vendors, setVendors] = useState([
     { name: 'Borneo Scientific Supplies', type: 'Lab Equipment', location: 'Kuching, Sarawak', contact: '+60 82-442 331', rating: 4.8 },
     { name: 'Thermo Fisher Scientific', type: 'Reagent Kits', location: 'Kuala Lumpur', contact: '+60 3-8948 2000', rating: 4.9 },
     { name: 'Shimadzu Asia Pacific', type: 'Spectrometer Systems', location: 'Singapore', contact: '+65 6778 6280', rating: 4.7 },
-    { name: 'Borosil Glass Works', type: 'Lab Glassware', location: 'Mumbai, India', contact: '+91 22-6740 6300', rating: 4.5 },
-    { name: 'Agilent Technologies', type: 'Analytical Instruments', location: 'Penang, Malaysia', contact: '+60 4-382 1350', rating: 4.6 },
-  ]
+  ])
+
+  const [newVendor, setNewVendor] = useState({ name: '', type: '', location: '', contact: '', rating: 5.0 })
+
+  const handleRegister = (e) => {
+    e.preventDefault()
+    setVendors([newVendor, ...vendors])
+    setShowRegister(false)
+    setNewVendor({ name: '', type: '', location: '', contact: '', rating: 5.0 })
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2.5rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2.5rem', position: 'relative' }}>
+      
+      {/* Registration Modal */}
+      <AnimatePresence>
+        {showRegister && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              style={{ background: 'white', width: '100%', maxWidth: '500px', borderRadius: 'var(--radius-lg)', padding: '2.5rem', position: 'relative', boxShadow: '0 50px 100px rgba(0,0,0,0.2)' }}>
+              <button onClick={() => setShowRegister(false)} style={{ position: 'absolute', right: '1.5rem', top: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--outline)' }}><X /></button>
+              
+              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Vendor Entry</h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '2rem' }}>Onboard a new strategic partner to the ProcuSure directory.</p>
+              
+              <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Company Name</label>
+                  <input required value={newVendor.name} onChange={e => setNewVendor({...newVendor, name: e.target.value})} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Primary Capability (e.g. Lab Supplies)</label>
+                  <input required value={newVendor.type} onChange={e => setNewVendor({...newVendor, type: e.target.value})} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                   <div>
+                     <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Contact</label>
+                     <input required value={newVendor.contact} onChange={e => setNewVendor({...newVendor, contact: e.target.value})} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
+                   </div>
+                   <div>
+                     <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Region</label>
+                     <input required value={newVendor.location} onChange={e => setNewVendor({...newVendor, location: e.target.value})} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
+                   </div>
+                </div>
+                
+                <button type="submit" className="gradient-fill" style={{ width: '100%', marginTop: '1rem', padding: '1rem', borderRadius: 'var(--radius-md)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer' }}>
+                   Commit to Registry
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -23,10 +73,10 @@ const VendorDirectory = () => {
            <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>Vendor Directory</span>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--primary)' }}>Vendor Directory</h1>
-          <button className="gradient-fill" style={{
+          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--primary)', margin: 0 }}>Vendor Directory</h1>
+          <button onClick={() => setShowRegister(true)} className="gradient-fill" style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.75rem 1.5rem', color: 'var(--on-primary)',
+            padding: '0.75rem 1.5rem', color: 'white',
             fontFamily: 'var(--font-headline)', fontWeight: 800, fontSize: '0.875rem',
             borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer'
           }}>
@@ -35,7 +85,7 @@ const VendorDirectory = () => {
         </div>
       </div>
 
-      {/* Search Bar - Responsive */}
+      {/* Search & Filter */}
       <div style={{
         background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)',
         padding: '1rem', border: '1px solid rgba(194,198,211,0.2)',
@@ -49,95 +99,34 @@ const VendorDirectory = () => {
           <input type="text" placeholder="Search by vendor name or category..."
             style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-body)', fontSize: '0.875rem', width: '100%' }} />
         </div>
-        {!isMobile && (
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {[{ icon: <Filter size={16} />, label: 'Category' }, { icon: <MapPin size={16} />, label: 'Region' }].map(f => (
-              <button key={f.label} style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.625rem 1rem', border: '1px solid rgba(194,198,211,0.2)',
-                borderRadius: 'var(--radius-sm)', fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700,
-                background: 'transparent', cursor: 'pointer', color: 'var(--on-surface-variant)', transition: 'background 0.15s'
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-low)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >{f.icon} {f.label}</button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Vendor Grid - Responsive columns */}
+      {/* Vendor Grid */}
       <div style={{ 
         display: 'grid', 
         gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
         gap: '1.5rem' 
       }}>
         {vendors.map((vendor, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: i * 0.05 }}
-            style={{
-              background: 'var(--surface-container-lowest)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '1.5rem',
-              border: '1px solid rgba(194,198,211,0.15)',
-              display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-              cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-container-high)'; e.currentTarget.style.transform = 'translateY(-4px)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-container-lowest)'; e.currentTarget.style.transform = 'none' }}
-          >
+          <motion.div key={i} whileHover={{ y: -4 }} style={{ background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)', padding: '1.5rem', border: '1px solid rgba(194,198,211,0.15)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+               <div style={{ width: 48, height: 48, background: 'var(--primary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '1.25rem' }}>{vendor.name[0]}</div>
+               <div style={{ textAlign: 'right' }}>
+                 <p style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase' }}>Loyalty</p>
+                 <p style={{ fontWeight: 900, color: 'var(--primary)' }}>{vendor.rating} ★</p>
+               </div>
+            </div>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-                <div style={{
-                  width: 56, height: 56, borderRadius: 'var(--radius-sm)',
-                  background: 'var(--primary-fixed-dim)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--primary)', fontWeight: 900, fontSize: '1.5rem'
-                }}>{vendor.name[0]}</div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '0.625rem', color: 'var(--outline)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.125rem' }}>Rating</p>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)' }}>{vendor.rating} ★</p>
-                </div>
-              </div>
-
-              <h3 style={{ fontFamily: 'var(--font-headline)', fontWeight: 800, fontSize: '1.125rem', letterSpacing: '-0.01em', marginBottom: '0.5rem', color: 'var(--primary)' }}>{vendor.name}</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{vendor.type}</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--on-surface-variant)' }}>
-                  <MapPin size={14} style={{ color: 'var(--primary)' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>{vendor.location}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--on-surface-variant)' }}>
-                  <Phone size={14} style={{ color: 'var(--primary)' }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>{vendor.contact}</span>
-                </div>
-              </div>
+               <h3 style={{ fontWeight: 800, fontSize: '1.125rem', color: 'var(--primary)' }}>{vendor.name}</h3>
+               <p style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginTop: '0.25rem' }}>{vendor.type}</p>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
-              <button style={{
-                display: 'flex', alignItems: 'center', gap: '0.25rem',
-                fontSize: '0.75rem', fontWeight: 800,
-                color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer'
-              }}>
-                Performance Report <ArrowRight size={14} />
-              </button>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {[Mail, Globe].map((Icon, j) => (
-                  <button key={j} style={{
-                    padding: '0.5rem', borderRadius: '50%',
-                    border: 'none', background: 'var(--surface-container-high)', cursor: 'pointer',
-                    color: 'var(--primary)', transition: 'background 0.15s'
-                  }}>
-                    <Icon size={14} />
-                  </button>
-                ))}
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MapPin size={14} /> {vendor.location}</div>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Phone size={14} /> {vendor.contact}</div>
             </div>
+            <button style={{ width: '100%', padding: '0.75rem', background: 'var(--primary-container)', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--on-primary-container)', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+               View Profile <ArrowRight size={14}/>
+            </button>
           </motion.div>
         ))}
       </div>

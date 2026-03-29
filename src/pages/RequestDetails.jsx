@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, CheckCircle, XCircle, FileText, Download, AlertTriangle, ChevronRight } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, FileText, Download, AlertTriangle, ChevronRight, ExternalLink } from 'lucide-react'
 import { procurementApi } from '../services/api'
 import TimelineView from '../components/TimelineView'
 import { useCompany, getStatusChipClass } from '../App'
@@ -53,11 +53,13 @@ const RequestDetails = () => {
     if (status === 'PENDING_MANAGER' && ['MANAGER', 'DIRECTOR'].includes(role)) return true
     if (status === 'PENDING_DIRECTOR' && role === 'DIRECTOR') return true
     if (status === 'APPROVED' && ['FINANCE', 'DIRECTOR'].includes(role)) return true
+    if (status === 'SUBMITTED' && ['MANAGER', 'DIRECTOR', 'ADMIN'].includes(role)) return true
     return false
   }
 
   const getNextStatus = (current) => {
     const flow = {
+      'SUBMITTED': 'PENDING_MANAGER',
       'PENDING_MANAGER': 'APPROVED',
       'PENDING_DIRECTOR': 'APPROVED',
       'APPROVED': 'PO_ISSUED',
@@ -88,34 +90,6 @@ const RequestDetails = () => {
         </div>
       </div>
 
-      {/* Mini Progress - Horizontal Scroll on Mobile */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: isMobile ? 'flex-start' : 'center', 
-        alignItems: 'center', 
-        gap: '0.5rem', 
-        padding: '1rem 0',
-        overflowX: isMobile ? 'auto' : 'visible',
-        WebkitOverflowScrolling: 'touch'
-      }}>
-        {[
-          { label: 'Created', done: ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR', 'APPROVED', 'PO_ISSUED', 'PAYMENT_PENDING', 'PAID'].includes(request.status) },
-          { label: 'Approved', done: ['APPROVED', 'PO_ISSUED', 'PAYMENT_PENDING', 'PAID'].includes(request.status) },
-          { label: 'PO Issued', done: ['PO_ISSUED', 'PAYMENT_PENDING', 'PAID'].includes(request.status) },
-          { label: 'Paid', done: ['PAID'].includes(request.status) }
-        ].map((step, idx, arr) => (
-          <React.Fragment key={idx}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', background: step.done ? 'var(--primary)' : 'var(--surface-container-high)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {step.done ? <CheckCircle size={14} /> : <div style={{ width: 6, height: 6, background: 'var(--outline-variant)', borderRadius: '50%' }} />}
-              </div>
-              <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', color: step.done ? 'var(--primary)' : 'var(--outline)' }}>{step.label}</span>
-            </div>
-            {idx < arr.length - 1 && <div style={{ width: 20, height: 2, background: 'var(--outline-variant)', flexShrink: 0 }} />}
-          </React.Fragment>
-        ))}
-      </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', gap: isMobile ? '1.5rem' : '2.5rem' }}>
         
         {/* Main Details Panel */}
@@ -124,7 +98,7 @@ const RequestDetails = () => {
           <div className="surface-card" style={{ padding: isMobile ? '1.5rem' : '2.5rem' }}>
             <div style={{ marginBottom: '2.5rem' }}>
               <p style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Authorized Value</p>
-              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>RM {request.total_amount.toLocaleString()}</h2>
+              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>RM {request.total_amount?.toLocaleString()}</h2>
             </div>
 
             <div style={{ marginBottom: '2rem' }}>
@@ -134,7 +108,7 @@ const RequestDetails = () => {
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)' }}>
                     <div>
                       <p style={{ fontWeight: 800, fontSize: '0.875rem' }}>{item.description}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>Qty: {item.quantity} x RM {item.unit_price?.toLocaleString()}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{item.quantity} {item.uom || 'PCS'} x RM {item.unit_price?.toLocaleString()}</p>
                     </div>
                     <span style={{ fontWeight: 900, color: 'var(--primary)' }}>RM {item.total_price?.toLocaleString()}</span>
                   </div>
@@ -181,21 +155,39 @@ const RequestDetails = () => {
           )}
 
           <div className="surface-card" style={{ padding: '1.75rem' }}>
-             <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Attachments</h4>
+             <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Evidence & Quotations</h4>
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)', cursor: 'not-allowed' }}>
-                   <FileText size={16} />
-                   <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>QUOT_STS_9022.pdf</span>
-                </div>
+                {request.quotation_url ? (
+                  <a 
+                    href={request.quotation_url.startsWith('http') ? request.quotation_url : `https://uml-procurement-internal-production.up.railway.app${request.quotation_url}`} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', 
+                      background: 'var(--secondary-container)', color: 'var(--on-secondary-container)', 
+                      borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 800, fontSize: '0.875rem' 
+                    }}
+                  >
+                    <FileText size={18} />
+                    View Supplier Quotation
+                    <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
+                  </a>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)', opacity: 0.6 }}>
+                    <FileText size={18} />
+                    <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>No quotation attached</span>
+                  </div>
+                )}
+                
                 {request.status === 'PO_ISSUED' && (
                   <button onClick={async () => {
                      const blob = await procurementApi.generatePO(id)
                      const url = URL.createObjectURL(blob)
                      const a = document.createElement('a')
                      a.href = url; a.download = `PO-${id}.pdf`; a.click()
-                  }} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--primary-fixed)', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 700 }}>
-                    <Download size={16} />
-                    <span style={{ fontSize: '0.75rem' }}>Purchase Order (Generated)</span>
+                  }} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--primary-fixed)', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 800 }}>
+                    <Download size={18} />
+                    <span style={{ fontSize: '0.875rem' }}>Final Purchase Order</span>
                   </button>
                 )}
              </div>

@@ -21,11 +21,12 @@ class LineItemCreate(BaseModel):
     total_price: float
 
 class RequestCreate(BaseModel):
-    title: str
-    vendor_name: str
-    vendor_id: str
+    title: Optional[str] = "Untitled Procurement"
+    vendor_name: Optional[str] = "Unknown Vendor"
+    vendor_id: Optional[str] = "V-NEW"
     total_amount: float
     items: List[LineItemCreate]
+    quotation_url: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str
@@ -80,7 +81,11 @@ def on_startup():
     from sqlalchemy import text
     with Session(engine) as session:
         try:
-            session.execute(text("ALTER TABLE lineitem ADD COLUMN uom VARCHAR DEFAULT 'PCS'"))
+            session.execute(text("ALTER TABLE procurementrequest ADD COLUMN status VARCHAR DEFAULT 'DRAFT'"))
+            session.commit()
+        except: pass
+        try:
+            session.execute(text("ALTER TABLE procurementrequest ADD COLUMN quotation_url VARCHAR"))
             session.commit()
         except: pass
         try:
@@ -331,7 +336,8 @@ def create_request(
         total_amount=data.total_amount,
         company_id=context['company'].id,
         created_by=context['user'].id,
-        items=[LineItem(**item.dict()) for item in data.items]
+        quotation_url=data.quotation_url,
+        items=[LineItem(**item.dict(), request_id=None) for item in data.items]
     )
     
     session.add(new_request)
@@ -346,6 +352,26 @@ def create_request(
     
     session.refresh(new_request)
     return new_request
+
+@app.post("/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    """Simple file upload to a local folder for PoC"""
+    upload_dir = "uploads"
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
+    
+    # Clean filename
+    safe_name = file.filename.replace(" ", "_")
+    file_path = os.path.join(upload_dir, safe_name)
+    with open(file_path, "wb") as buffer:
+        buffer.write(await file.read())
+    
+    # We return the absolute URL for the frontend to use
+    return {"url": f"/uploads/{safe_name}", "filename": safe_name}
+
+# Serve uploads directory
+from fastapi.staticfiles import StaticFiles
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/requests/", response_model=List[ProcurementRequest])
 def list_requests(
