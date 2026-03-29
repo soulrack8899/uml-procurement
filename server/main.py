@@ -41,130 +41,131 @@ class UserCreate(BaseModel):
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
-# Enable CORS for React frontend (Vercel) and local development
+# Define origins for CORS - specified origins are REQUIRED when allow_credentials is True
+origins = [
+    "https://uml-procurement-internal.vercel.app",
+    "https://uml-procurement-internal-production.up.railway.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8000"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Simplified for global access, can be restricted later if needed
-    allow_credentials=True, # Set to True to handle internal sessions
+    allow_origins=origins,
+    allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from fastapi.responses import JSONResponse
-from fastapi import Request
+@app.get("/")
+def read_root():
+    return {"status": "ok", "service": "UMLAB SaaS Master API", "timestamp": datetime.utcnow().isoformat()}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # This handler helps us catch unhandled 500s and ensures they still have CORS headers
+    # Ensure unhandled errors return valid CORS headers to prevent "Missing Header" errors in browser
+    origin = request.headers.get("Origin", "*")
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal Server Error", "exception": str(exc)},
         headers={
-            "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
-            "Access-Control-Allow-Credentials": "false",
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true" if origin != "*" else "false",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*"
         }
     )
 
 @app.on_event("startup")
 def on_startup():
-    create_db_and_tables()
-    
-    # Migration: Ensure all columns exist
-    from sqlalchemy import text
-    with Session(engine) as session:
-        try:
-            session.execute(text("ALTER TABLE procurementrequest ADD COLUMN status VARCHAR DEFAULT 'DRAFT'"))
-            session.commit()
-        except: pass
-        try:
-            session.execute(text("ALTER TABLE procurementrequest ADD COLUMN quotation_url VARCHAR"))
-            session.commit()
-        except: pass
-        try:
-            session.execute(text("ALTER TABLE user ADD COLUMN email VARCHAR"))
-            session.commit()
-        except: pass
-        try:
-            session.execute(text("ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'"))
-            session.commit()
-        except: pass
-
-    # Bootstrap default companies...
-    with Session(engine) as session:
-        statement = select(Company).where(Company.name == "UMLAB Sarawak")
-        results = session.exec(statement)
-        if not results.first():
-             # Company A
-             umlab = Company(name="UMLAB Sarawak", domain="umlab.sarawak.my")
-             session.add(umlab)
-             
-             # Company B (Replacement for Alfa Mount)
-             merakai = Company(name="Merakai Indah Sdn Bhd", domain="merakai.indah.my")
-             session.add(merakai)
-             
-             # Company C
-             quantum = Company(name="Quantum Sense Sdn Bhd", domain="quantumsense.my")
-             session.add(quantum)
-             
-             session.commit()
-             session.refresh(umlab)
-             session.refresh(merakai)
-             session.refresh(quantum)
-             
-             # Default settings
-             session.add(CompanySettings(company_id=umlab.id, approval_threshold=5000.0))
-             session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
-             session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
-             
-             # Global Admin User
-             karlos = User(
-                 name="Karlos Albert", 
-                 email="admin@umlab.sarawak.my", 
-                 password="password123",
-                 global_role=UserRole.GLOBAL_ADMIN
-             )
-             session.add(karlos)
-             
-             # Case C: Johor Partner
-             johor = User(name="Johor Partner", email="johor@umlab.sarawak.my")
-             session.add(johor)
-             
-             session.commit()
-             session.refresh(karlos)
-             session.refresh(johor)
-             
-             # Mapping DIFFERENT ROLES for DIFFERENT COMPANIES
-             # Manager in UMLAB
-             session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.MANAGER))
-             # Finance in Merakai
-             session.add(TenantAccess(user_id=karlos.id, company_id=merakai.id, role=UserRole.FINANCE))
-             
-             # Case C: Assign Johor Partner ONLY to UMLAB Sarawak as Director
-             session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
-             
-             # Case A: Merakai pending request for RM 10,000
-             request_a = ProcurementRequest(
-                 company_id=merakai.id,
-                 created_by=karlos.id,
-                 title="Enterprise Server Rack",
-                 vendor_name="Dell Emc",
-                 vendor_id="V-103",
-                 total_amount=10000.0,
-                 status=StatusEnum.PENDING_DIRECTOR
-             )
-             session.add(request_a)
-             
-             # Case B: UMLAB Sarawak petty cash request for RM 150 Ready for disbursement
-             petty_b = PettyCash(
-                 company_id=umlab.id,
-                 requester_id=karlos.id,
-                 amount=150.0,
-                 receipt_url="PC-0012",
-                 status=PettyCashStatus.APPROVED
-             )
-             session.add(petty_b)
-             
-             session.commit()
+    """Initializes database and performs safe migrations/seeding on startup"""
+    try:
+        create_db_and_tables()
+        
+        # Safe Migration Wrapper - ensures columns exist without crashing if they already do
+        from sqlalchemy import text
+        with Session(engine) as session:
+            migrations = [
+                "ALTER TABLE procurementrequest ADD COLUMN status VARCHAR DEFAULT 'DRAFT'",
+                "ALTER TABLE procurementrequest ADD COLUMN quotation_url VARCHAR",
+                "ALTER TABLE user ADD COLUMN email VARCHAR",
+                "ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'"
+            ]
+            for m in migrations:
+                try:
+                    session.execute(text(m))
+                    session.commit()
+                except Exception:
+                    session.rollback() # Logic: Column likely already exists
+            
+            # Safe Bootstrap - only seeds if the standard company doesn't exist
+            statement = select(Company).where(Company.name == "UMLAB Sarawak")
+            if not session.exec(statement).first():
+                # Seed Companies
+                umlab = Company(name="UMLAB Sarawak", domain="umlab.sarawak.my")
+                merakai = Company(name="Merakai Indah Sdn Bhd", domain="merakai.indah.my")
+                quantum = Company(name="Quantum Sense Sdn Bhd", domain="quantumsense.my")
+                session.add_all([umlab, merakai, quantum])
+                session.commit()
+                
+                # Refresh to get IDs
+                session.refresh(umlab)
+                session.refresh(merakai)
+                session.refresh(quantum)
+                
+                # Default settings
+                session.add(CompanySettings(company_id=umlab.id, approval_threshold=5000.0))
+                session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
+                session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
+                
+                # Master Admin
+                karlos = User(
+                    name="Karlos Albert", 
+                    email="admin@umlab.sarawak.my", 
+                    password="password123",
+                    global_role=UserRole.GLOBAL_ADMIN
+                )
+                session.add(karlos)
+                
+                # Regional Director
+                johor = User(name="Johor Partner", email="johor@umlab.sarawak.my")
+                session.add(johor)
+                
+                session.commit()
+                session.refresh(karlos)
+                session.refresh(johor)
+                
+                # Multi-Tenant Role Mapping
+                session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.MANAGER))
+                session.add(TenantAccess(user_id=karlos.id, company_id=merakai.id, role=UserRole.FINANCE))
+                session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
+                
+                # Demo Procurement Request
+                session.add(ProcurementRequest(
+                    company_id=merakai.id,
+                    created_by=karlos.id,
+                    title="Enterprise Server Rack",
+                    vendor_name="Dell Emc",
+                    vendor_id="V-103",
+                    total_amount=10000.0,
+                    status=StatusEnum.PENDING_DIRECTOR
+                ))
+                
+                # Demo Petty Cash
+                session.add(PettyCash(
+                    company_id=umlab.id,
+                    requester_id=karlos.id,
+                    amount=150.0,
+                    receipt_url="PC-0012",
+                    status=PettyCashStatus.APPROVED
+                ))
+                
+                session.commit()
+    except Exception as e:
+        import traceback
+        print(f"STARTUP ERROR (NON-FATAL): {str(e)}")
+        traceback.print_exc()
 
 # Dependency for DB Session
 def get_session():
@@ -253,12 +254,6 @@ class ApprovalEngine:
             return StatusEnum.PAID
         return None
 
-# --- Global Registry (Tenant Discovery) ---
-
-@app.get("/companies/", response_model=List[Company])
-def list_companies(session: Session = Depends(get_session)):
-    """Fetches all companies for the global context switcher"""
-    return session.exec(select(Company)).all()
 
 @app.get("/vendors/")
 def list_vendors(context: dict = Depends(get_active_session_context), session: Session = Depends(get_session)):
@@ -390,6 +385,49 @@ def get_request(
     )).first()
     if not req:
         raise HTTPException(status_code=404, detail="Unauthorized/Not Found")
+    return req
+
+@app.patch("/requests/{request_id}", response_model=ProcurementRequest)
+def update_request(
+    request_id: int,
+    request_update: dict,
+    context: dict = Depends(get_active_session_context),
+    session: Session = Depends(get_session)
+):
+    """Updates procurement request details (e.g. adding quotation after creation)"""
+    req = session.exec(select(ProcurementRequest).where(
+        ProcurementRequest.id == request_id, 
+        ProcurementRequest.company_id == context['company'].id
+    )).first()
+    
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found or unauthorized")
+    
+    # Permission: Creator, Admin, or higher roles can update
+    # For now, let's just check if they are in the same company (which context already did)
+    
+    for key, value in request_update.items():
+        if hasattr(req, key):
+            setattr(req, key, value)
+            
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    
+    # Audit log for the update
+    log = AuditLog(
+        company_id=context['company'].id,
+        request_id=request_id,
+        action="UPDATE",
+        from_status=req.status,
+        to_status=req.status,
+        user_name=context['user'].name,
+        user_role=context['active_role'],
+        notes=f"Updated fields: {', '.join(request_update.keys())}"
+    )
+    session.add(log)
+    session.commit()
+    
     return req
 
 @app.post("/requests/{request_id}/transition")
