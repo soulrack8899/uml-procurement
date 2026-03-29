@@ -9,10 +9,10 @@ const ProcurementForm = () => {
   const navigate = useNavigate()
   const { isMobile } = useCompany()
   const [vendor, setVendor] = useState({ name: '', id: '' })
-  const [items, setItems] = useState([{ description: '', quantity: 1, unitPrice: 0 }])
+  const [items, setItems] = useState([{ description: '', quantity: 1, uom: 'PCS', unitPrice: 0 }])
   const [submitting, setSubmitting] = useState(false)
 
-  const addItem = () => setItems([...items, { description: '', quantity: 1, unitPrice: 0 }])
+  const addItem = () => setItems([...items, { description: '', quantity: 1, uom: 'PCS', unitPrice: 0 }])
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index))
 
   const handleItemChange = (index, field, value) => {
@@ -35,6 +35,7 @@ const ProcurementForm = () => {
         items: items.map(i => ({
           description: i.description,
           quantity: i.quantity,
+          uom: i.uom,
           unit_price: i.unitPrice,
           total_price: i.quantity * i.unitPrice
         }))
@@ -110,7 +111,7 @@ const ProcurementForm = () => {
               {items.map((item, i) => (
                 <div key={i} style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: isMobile ? '1fr' : '4fr 1.5fr 2fr 2fr auto',
+                  gridTemplateColumns: isMobile ? '1fr' : '3.5fr 1fr 1fr 1.5fr 1.5fr auto',
                   gap: '1rem', alignItems: 'end', padding: '1.25rem',
                   background: 'var(--surface-container-high)', borderRadius: 'var(--radius-sm)'
                 }}>
@@ -120,30 +121,24 @@ const ProcurementForm = () => {
                       onChange={e => handleItemChange(i, 'description', e.target.value)}
                       style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
                   </div>
-                  <div style={{ display: isMobile ? 'flex' : 'block', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ ...S.label, fontSize: '0.5625rem' }}>Qty</label>
-                      <input type="number" value={item.quantity}
-                        onChange={e => handleItemChange(i, 'quantity', parseInt(e.target.value) || 0)}
-                        style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
-                    </div>
-                    {isMobile && (
-                      <div style={{ flex: 1 }}>
-                        <label style={{ ...S.label, fontSize: '0.5625rem' }}>Rate (RM)</label>
-                        <input type="number" value={item.unitPrice}
-                          onChange={e => handleItemChange(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                          style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
-                      </div>
-                    )}
+                  <div>
+                    <label style={{ ...S.label, fontSize: '0.5625rem' }}>Qty</label>
+                    <input type="number" value={item.quantity}
+                      onChange={e => handleItemChange(i, 'quantity', parseInt(e.target.value) || 0)}
+                      style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
                   </div>
-                  {!isMobile && (
-                    <div>
-                      <label style={{ ...S.label, fontSize: '0.5625rem' }}>Rate (RM)</label>
-                      <input type="number" value={item.unitPrice}
-                        onChange={e => handleItemChange(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
-                    </div>
-                  )}
+                  <div>
+                    <label style={{ ...S.label, fontSize: '0.5625rem' }}>UOM</label>
+                    <input type="text" value={item.uom} placeholder="PCS"
+                      onChange={e => handleItemChange(i, 'uom', e.target.value)}
+                      style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.label, fontSize: '0.5625rem' }}>Rate (RM)</label>
+                    <input type="number" value={item.unitPrice}
+                      onChange={e => handleItemChange(i, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      style={{ ...S.input, fontSize: '0.875rem' }} onFocus={S.focus} onBlur={S.blur} />
+                  </div>
                   <div style={{ textAlign: 'right' }}>
                     <label style={{ ...S.label, fontSize: '0.5625rem' }}>Total</label>
                     <p style={{ fontFamily: 'var(--font-headline)', fontWeight: 900, color: 'var(--primary)', fontSize: '0.875rem' }}>

@@ -14,6 +14,7 @@ import PaymentRequest from './pages/PaymentRequest'
 import AdminSettings from './pages/AdminSettings'
 import TenantOnboarding from './pages/TenantOnboarding'
 import Login from './pages/Login'
+import UserOnboarding from './pages/UserOnboarding'
 
 // --- Status Badge Helper (Stitch exact chip classes) ---
 export function getStatusChipClass(status) {
@@ -84,8 +85,8 @@ function AppContent() {
 
   const fetchActiveRole = async () => {
     try {
-      const { active_role } = await procurementApi.whoami()
-      setActiveRole(active_role)
+      const { active_role, global_role } = await procurementApi.whoami()
+      setActiveRole(global_role === 'GLOBAL_ADMIN' ? 'GLOBAL_ADMIN' : active_role)
     } catch (err) {
       console.error("Context Identification Failure:", err)
       setActiveRole(null)
@@ -118,8 +119,9 @@ function AppContent() {
     { id: '/petty-cash', label: 'Petty Cash', icon: <Wallet size={20} /> },
     { id: '/payment-request', label: 'Payment Request', icon: <FileText size={20} /> },
     { id: '/vendors', label: 'Vendors', icon: <Users size={20} /> },
-    { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} /> },
-    { id: '/admin-settings', label: 'Admin Settings', icon: <Settings size={20} /> },
+    { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/onboard-users', label: 'Identities', icon: <Plus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/admin-settings', label: 'Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
   ]
 
   if (!isAuthenticated) {
@@ -222,7 +224,7 @@ function AppContent() {
 
           {/* Navigation */}
           <nav style={{ flex: 1, padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
-            {navItems.map((item) => {
+            {navItems.filter(item => !item.roles || item.roles.includes(activeRole)).map((item) => {
               const isActive = location.pathname === item.id || (item.id !== '/' && location.pathname.startsWith(item.id))
               return (
                 <Link
@@ -383,6 +385,7 @@ function AppContent() {
                   <Route path="/payment-request" element={<PaymentRequest />} />
                   <Route path="/admin-settings" element={<AdminSettings />} />
                   <Route path="/onboard" element={<TenantOnboarding />} />
+                  <Route path="/onboard-users" element={<UserOnboarding />} />
                   <Route path="/login" element={<Navigate to="/" />} />
                 </Routes>
               </motion.div>

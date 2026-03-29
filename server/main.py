@@ -7,9 +7,36 @@ from sqlmodel import Session, select
 from models import (
     engine, create_db_and_tables, ProcurementRequest, LineItem, 
     FileMetadata, AuditLog, StatusEnum, UserRole, Company, 
-    CompanySettings, PettyCash, PettyCashStatus, User, TenantAccess
+    CompanySettings, PettyCash, PettyCashStatus, User, TenantAccess, LineItem
 )
 from services.po_generator import generate_po_pdf
+from pydantic import BaseModel
+
+# Schema for incoming request data
+class LineItemCreate(BaseModel):
+    description: str
+    quantity: int
+    uom: str
+    unit_price: float
+    total_price: float
+
+class RequestCreate(BaseModel):
+    title: str
+    vendor_name: str
+    vendor_id: str
+    total_amount: float
+    items: List[LineItemCreate]
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str = "password123"
+    company_id: Optional[int] = None
+    role: UserRole = UserRole.REQUESTER
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
@@ -48,7 +75,24 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
-    # Bootstrap default companies and multi-role user on startup
+    
+    # Migration: Ensure all columns exist
+    from sqlalchemy import text
+    with Session(engine) as session:
+        try:
+            session.execute(text("ALTER TABLE lineitem ADD COLUMN uom VARCHAR DEFAULT 'PCS'"))
+            session.commit()
+        except: pass
+        try:
+            session.execute(text("ALTER TABLE user ADD COLUMN email VARCHAR"))
+            session.commit()
+        except: pass
+        try:
+            session.execute(text("ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'"))
+            session.commit()
+        except: pass
+
+    # Bootstrap default companies...
     with Session(engine) as session:
         statement = select(Company).where(Company.name == "UMLAB Sarawak")
         results = session.exec(statement)
@@ -69,11 +113,16 @@ def on_startup():
              session.add(CompanySettings(company_id=alfa.id, approval_threshold=10000.0))
              
              # Global Admin User
-             karlos = User(name="Karlos Albert", global_role=UserRole.GLOBAL_ADMIN)
+             karlos = User(
+                 name="Karlos Albert", 
+                 email="admin@umlab.sarawak.my", 
+                 password="password123",
+                 global_role=UserRole.GLOBAL_ADMIN
+             )
              session.add(karlos)
              
              # Case C: Johor Partner
-             johor = User(name="Johor Partner")
+             johor = User(name="Johor Partner", email="johor@umlab.sarawak.my")
              session.add(johor)
              
              session.commit()
@@ -233,30 +282,63 @@ def list_vendors(context: dict = Depends(get_active_session_context), session: S
 def whoami(context: dict = Depends(get_active_session_context)):
     """Surfaces contextual role for UI adaptation"""
     return {
+        "user_id": context['user'].id,
         "user_name": context['user'].name,
-        "company_name": context['company'].name,
-        "active_role": context['active_role']
+        "company_id": context['company'].id if context['company'] else None,
+        "company_name": context['company'].name if context['company'] else "SaaS Master Hub",
+        "active_role": context['active_role'],
+        "global_role": context['user'].global_role
+    }
+
+@app.post("/session/login")
+def login(request: LoginRequest, session: Session = Depends(get_session)):
+    """Simple login for PoC purposes"""
+    user = session.exec(select(User).where(User.email == request.email)).first()
+    if not user or user.password != request.password:
+        raise HTTPException(status_code=401, detail="Invalid identity credentials.")
+    
+    # By default, find their primary company
+    primary_access = session.exec(select(TenantAccess).where(TenantAccess.user_id == user.id)).first()
+    
+    return {
+        "user_id": user.id,
+        "user_name": user.name,
+        "active_company_id": primary_access.company_id if primary_access else None,
+        "role": user.global_role
     }
 
 @app.post("/requests/", response_model=ProcurementRequest)
 def create_request(
-    request: ProcurementRequest, 
+    data: RequestCreate, 
     context: dict = Depends(get_active_session_context), 
     session: Session = Depends(get_session)
 ):
     if not context['company']:
         raise HTTPException(status_code=400, detail="Missing company context for request.")
-        
-    request.company_id = context['company'].id
-    request.created_by = context['user'].id
-    session.add(request)
+    
+    # Map the schema to the actual model
+    new_request = ProcurementRequest(
+        title=data.title,
+        vendor_name=data.vendor_name,
+        vendor_id=data.vendor_id,
+        total_amount=data.total_amount,
+        company_id=context['company'].id,
+        created_by=context['user'].id,
+        items=[LineItem(**item.dict()) for item in data.items]
+    )
+    
+    session.add(new_request)
     try:
         session.commit()
     except Exception as e:
         session.rollback()
+        import traceback
+        error_msg = traceback.format_exc()
+        print(f"CRITICAL ERROR in create_request: {error_msg}")
         raise HTTPException(status_code=500, detail=f"Database commit failed: {str(e)}")
-    session.refresh(request)
-    return request
+    
+    session.refresh(new_request)
+    return new_request
 
 @app.get("/requests/", response_model=List[ProcurementRequest])
 def list_requests(
@@ -344,9 +426,13 @@ def list_companies(session: Session = Depends(get_session)):
 @app.post("/companies/onboard", response_model=Company)
 def onboard_company(
     company: Company, 
+    context: dict = Depends(get_active_session_context),
     session: Session = Depends(get_session)
 ):
     """Provisions a new enterprise tenant and default settings"""
+    if context['active_role'] != UserRole.GLOBAL_ADMIN:
+        raise HTTPException(status_code=403, detail="Authorized Global Admin clearance required for entity provisioning.")
+        
     session.add(company)
     session.commit()
     session.refresh(company)
@@ -355,12 +441,38 @@ def onboard_company(
     settings = CompanySettings(company_id=company.id)
     session.add(settings)
     
-    # Map the current user as an ADMIN for the new company by default (mocking current user 1)
-    session.add(TenantAccess(user_id=1, company_id=company.id, role=UserRole.ADMIN))
+    # Map the CREATING user as an ADMIN for the new company by default
+    session.add(TenantAccess(user_id=context['user'].id, company_id=company.id, role=UserRole.ADMIN))
     
     session.commit()
     session.refresh(company)
     return company
+
+@app.post("/users/onboard")
+def onboard_user(
+    data: UserCreate, 
+    context: dict = Depends(get_active_session_context),
+    session: Session = Depends(get_session)
+):
+    """Adds a new internal identity to the ecosystem and maps them to an entity"""
+    # Permission check: Only Global Admins or Company Admins can onboard
+    if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]:
+         raise HTTPException(status_code=403, detail="Unauthorized for identity provisioning.")
+
+    # Create user
+    new_user = User(name=data.name, email=data.email, password=data.password)
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    
+    # Map to company if provided
+    co_id = data.company_id if data.company_id else context['company'].id if context['company'] else None
+    
+    if co_id:
+        session.add(TenantAccess(user_id=new_user.id, company_id=co_id, role=data.role))
+        session.commit()
+        
+    return {"status": "User Provisioned", "id": new_user.id}
 
 @app.patch("/companies/{company_id}", response_model=Company)
 def update_company(

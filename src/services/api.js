@@ -112,5 +112,32 @@ export const procurementApi = {
       headers: getHeaders(),
     });
     return response.json();
+  },
+
+  // --- Users & Auth ---
+  login: async (email, password) => {
+    const response = await fetch(`${API_BASE_URL}/session/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!response.ok) {
+       const error = await response.json();
+       throw new Error(error.detail || "Authentication Failed");
+    }
+    return response.json();
+  },
+
+  onboardUser: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/users/onboard`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+       const error = await response.json();
+       throw new Error(error.detail || "User Creation Failed");
+    }
+    return response.json();
   }
 };

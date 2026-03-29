@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useCompany } from '../App'
 import { procurementApi } from '../services/api'
+import { useNavigate } from 'react-router-dom'
 import { Shield, Lock, AlertTriangle, ChevronRight, Download, Users, SwitchCamera } from 'lucide-react'
 
 const AdminSettings = () => {
+  const navigate = useNavigate()
   const { currentCompany, isMobile } = useCompany()
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -116,7 +118,7 @@ const AdminSettings = () => {
                   </div>
                 ))}
              </div>
-             <button style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', background: 'transparent', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Manage Permissions</button>
+             <button onClick={() => navigate('/onboard-users')} style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', background: 'transparent', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Manage Permissions</button>
           </section>
 
           <section style={{ background: 'var(--error-container)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '1rem' }}>

@@ -61,6 +61,8 @@ class CompanySettings(SQLModel, table=True):
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
+    email: str = Field(unique=True, index=True)
+    password: str = Field(default="password123") # Plain text for demo simplicity, in production use bcrypt
     # Global role (e.g. for super admin access)
     global_role: UserRole = Field(default=UserRole.REQUESTER)
     
@@ -89,6 +91,7 @@ class LineItem(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     description: str
     quantity: int
+    uom: str = Field(default="PCS")
     unit_price: float
     total_price: float
     request_id: Optional[int] = Field(default=None, foreign_key="procurementrequest.id")
