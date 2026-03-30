@@ -212,6 +212,12 @@ const Login = ({ onLogin }) => {
                 <button disabled={isLoading} className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                     {isLoading ? 'Verifying...' : <>Authorize Access <ArrowRight size={18} /></>}
                 </button>
+
+                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                   <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 600 }}>
+                      New to the ecosystem? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 900, textDecoration: 'none' }}>REGISTER NEW IDENTITY</Link>
+                   </p>
+                </div>
             </motion.form>
           )}
         </AnimatePresence>
@@ -224,11 +230,11 @@ const Login = ({ onLogin }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                <div>
                   <p style={{ fontSize: '0.5rem', color: 'var(--outline)', fontWeight: 900 }}>IDENTITY ID</p>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>admin@umlab.sarawak.my</p>
+                  <p style={{ fontSize: '0.625rem', fontWeight: 700 }}>pomodorotechco@gmail.com</p>
                </div>
                <div>
                   <p style={{ fontSize: '0.5rem', color: 'var(--outline)', fontWeight: 900 }}>SECURE KEY</p>
-                  <p style={{ fontSize: '0.75rem', fontWeight: 700 }}>password123</p>
+                  <p style={{ fontSize: '0.625rem', fontWeight: 700 }}>pomodorotechco123</p>
                </div>
             </div>
           </div>

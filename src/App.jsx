@@ -16,6 +16,7 @@ import TenantOnboarding from './pages/TenantOnboarding'
 import Login from './pages/Login'
 import UserOnboarding from './pages/UserOnboarding'
 import SystemManagement from './pages/SystemManagement'
+import Register from './pages/Register'
 
 // --- Status Badge Helper (Stitch exact chip classes) ---
 export function getStatusChipClass(status) {
@@ -389,6 +390,7 @@ function AppContent() {
                   <Route path="/onboard" element={<TenantOnboarding />} />
                   <Route path="/onboard-users" element={<UserOnboarding />} />
                   <Route path="/system-management" element={<SystemManagement />} />
+                  <Route path="/register" element={<Register />} />
                   <Route path="/login" element={<Navigate to="/" />} />
                 </Routes>
               </motion.div>

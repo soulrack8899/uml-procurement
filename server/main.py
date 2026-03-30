@@ -36,6 +36,7 @@ class LoginRequest(BaseModel):
 class UserCreate(BaseModel):
     name: str
     email: str
+    phone_number: Optional[str] = None
     password: str = "password123"
     company_id: Optional[int] = None
     role: UserRole = UserRole.REQUESTER
@@ -142,29 +143,50 @@ def on_startup():
                 session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
                 session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
                 
-                # Master Admin
-                karlos = User(
-                    name="Karlos Albert", 
-                    email="admin@umlab.sarawak.my", 
-                    password="password123",
+            # Master Admin (New primary authority)
+            pomodoro = session.exec(select(User).where(User.email == "pomodorotechco@gmail.com")).first()
+            if not pomodoro:
+                pomodoro = User(
+                    name="Pomodoro Admin", 
+                    email="pomodorotechco@gmail.com", 
+                    password="pomodorotechco123",
                     global_role=UserRole.GLOBAL_ADMIN,
                     approval_status="APPROVED",
                     is_temporary_password=False
                 )
+                session.add(pomodoro)
+                session.commit()
+                session.refresh(pomodoro)
+
+            # Karlos (Transition to Company Admin for UMLAB)
+            karlos = session.exec(select(User).where(User.email == "admin@umlab.sarawak.my")).first()
+            if karlos:
+                karlos.global_role = UserRole.REQUESTER
                 session.add(karlos)
                 
-                # Regional Director
+                # Ensure UMLAB Admin mapping
+                umlab = session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
+                if umlab:
+                    mapping = session.exec(select(TenantAccess).where(TenantAccess.user_id == karlos.id, TenantAccess.company_id == umlab.id)).first()
+                    if not mapping:
+                        session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.ADMIN))
+                    else:
+                        mapping.role = UserRole.ADMIN
+                        session.add(mapping)
+                session.commit()
+            
+            # Regional Director
+            johor = session.exec(select(User).where(User.email == "johor@umlab.sarawak.my")).first()
+            if not johor:
                 johor = User(name="Johor Partner", email="johor@umlab.sarawak.my")
                 session.add(johor)
-                
                 session.commit()
-                session.refresh(karlos)
                 session.refresh(johor)
                 
-                # Multi-Tenant Role Mapping
-                session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.MANAGER))
-                session.add(TenantAccess(user_id=karlos.id, company_id=merakai.id, role=UserRole.FINANCE))
-                session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
+                umlab = session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
+                if umlab:
+                   session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
+                session.commit()
                 
                 # Demo Procurement Request
                 session.add(ProcurementRequest(
@@ -362,6 +384,38 @@ def whoami(context: dict = Depends(get_active_session_context), session: Session
             "currency": "RM"
         }
     }
+
+@app.post("/session/register")
+def register_user(user_data: UserCreate, session: Session = Depends(get_session)):
+    # Check if user already exists
+    existing = session.exec(select(User).where(User.email == user_data.email)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Identity ID already registered in ecosystem cluster.")
+    
+    # Create new identity in PENDING status
+    new_user = User(
+        name=user_data.name,
+        email=user_data.email,
+        phone_number=user_data.phone_number,
+        password=user_data.password, # Will be treated as temporary initially
+        global_role=UserRole.REQUESTER,
+        approval_status="PENDING",
+        is_temporary_password=True
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+    
+    # Map to company if provided
+    if user_data.company_id:
+        company = session.get(Company, user_data.company_id)
+        if company:
+            session.add(TenantAccess(user_id=new_user.id, company_id=company.id, role=UserRole.REQUESTER))
+            session.commit()
+        else:
+            raise HTTPException(status_code=404, detail="Entity target not found.")
+            
+    return {"status": "SUCCESS", "user_id": new_user.id, "message": "Identity registered. Pending governance authorization."}
 
 @app.post("/session/login")
 def login(request: LoginRequest, session: Session = Depends(get_session)):

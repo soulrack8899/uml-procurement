@@ -41,7 +41,7 @@ class TenantAccess(SQLModel, table=True):
 class Company(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
-    domain: str
+    domain: Optional[str] = None
     logo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -62,6 +62,7 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     email: str = Field(unique=True, index=True)
+    phone_number: Optional[str] = None
     password: str = Field(default="password123") # Plain text for demo simplicity, in production use bcrypt
     # Global role (e.g. for super admin access)
     global_role: UserRole = Field(default=UserRole.REQUESTER)

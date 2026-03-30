@@ -74,10 +74,10 @@ const TenantOnboarding = () => {
                       style={S.input} />
                   </div>
                   <div>
-                    <label style={S.label}>Operational Domain</label>
-                    <input type="text" required value={formData.domain}
+                    <label style={S.label}>Operational Domain (Optional)</label>
+                    <input type="text" value={formData.domain}
                       onChange={e => setFormData({...formData, domain: e.target.value})}
-                      placeholder="e.g. advtech.co.uk"
+                      placeholder="e.g. advtech.co.uk (or leave blank)"
                       style={S.input} />
                   </div>
                 </div>
