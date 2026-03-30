@@ -151,6 +151,32 @@ export const procurementApi = {
     return response.json();
   },
 
+  getUsers: async () => {
+    const response = await fetch(`${API_BASE_URL}/users/`, { headers: getHeaders() });
+    if (!response.ok) throw new Error("Unauthorized to access user directory");
+    return response.json();
+  },
+
+  updateUser: async (userId, data) => {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("User update failed");
+    return response.json();
+  },
+
+  changePassword: async (newPassword) => {
+    const response = await fetch(`${API_BASE_URL}/session/change-password`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ new_password: newPassword }),
+    });
+    if (!response.ok) throw new Error("Password change failed");
+    return response.json();
+  },
+
   uploadFile: async (file) => {
     const formData = new FormData();
     formData.append("file", file);

@@ -65,6 +65,8 @@ class User(SQLModel, table=True):
     password: str = Field(default="password123") # Plain text for demo simplicity, in production use bcrypt
     # Global role (e.g. for super admin access)
     global_role: UserRole = Field(default=UserRole.REQUESTER)
+    approval_status: str = Field(default="PENDING") # PENDING, APPROVED, SUSPENDED
+    is_temporary_password: bool = Field(default=True)
     
     companies: List[Company] = Relationship(back_populates="users", link_model=TenantAccess)
 

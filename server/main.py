@@ -111,6 +111,8 @@ def on_startup():
                 "ALTER TABLE procurementrequest ADD COLUMN quotation_url VARCHAR",
                 "ALTER TABLE user ADD COLUMN email VARCHAR",
                 "ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'",
+                "ALTER TABLE user ADD COLUMN approval_status VARCHAR DEFAULT 'APPROVED'",
+                "ALTER TABLE user ADD COLUMN is_temporary_password BOOLEAN DEFAULT 0",
                 "ALTER TABLE pettycash ADD COLUMN description VARCHAR DEFAULT 'Petty Cash Claim'"
             ]
             for m in migrations:
@@ -145,7 +147,9 @@ def on_startup():
                     name="Karlos Albert", 
                     email="admin@umlab.sarawak.my", 
                     password="password123",
-                    global_role=UserRole.GLOBAL_ADMIN
+                    global_role=UserRole.GLOBAL_ADMIN,
+                    approval_status="APPROVED",
+                    is_temporary_password=False
                 )
                 session.add(karlos)
                 
@@ -361,10 +365,13 @@ def whoami(context: dict = Depends(get_active_session_context), session: Session
 
 @app.post("/session/login")
 def login(request: LoginRequest, session: Session = Depends(get_session)):
-    """Simple login for PoC purposes"""
+    """Simple login with status and temporary password validation"""
     user = session.exec(select(User).where(User.email == request.email)).first()
     if not user or user.password != request.password:
         raise HTTPException(status_code=401, detail="Invalid identity credentials.")
+    
+    if user.approval_status != "APPROVED":
+        raise HTTPException(status_code=403, detail=f"Access Denied: Your account status is {user.approval_status}. Contact your Administrator.")
     
     # By default, find their primary company
     primary_access = session.exec(select(TenantAccess).where(TenantAccess.user_id == user.id)).first()
@@ -373,8 +380,82 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
         "user_id": user.id,
         "user_name": user.name,
         "active_company_id": primary_access.company_id if primary_access else None,
-        "role": user.global_role
+        "role": user.global_role,
+        "is_temporary_password": user.is_temporary_password
     }
+
+class PasswordChangeRequest(BaseModel):
+    new_password: str
+
+@app.post("/session/change-password")
+def change_password(
+    data: PasswordChangeRequest, 
+    context: dict = Depends(get_active_session_context), 
+    session: Session = Depends(get_session)
+):
+    user = context['user']
+    user.password = data.new_password
+    user.is_temporary_password = False
+    session.add(user)
+    session.commit()
+    return {"status": "Password Updated Successfully"}
+
+@app.get("/users/", response_model=List[User])
+def list_users(
+    context: dict = Depends(get_active_session_context), 
+    session: Session = Depends(get_session)
+):
+    """Lists users based on hierarchy: GLOBAL_ADMIN sees all, ADMIN sees company only."""
+    if context['active_role'] == UserRole.GLOBAL_ADMIN:
+        return session.exec(select(User)).all()
+    
+    if context['active_role'] == UserRole.ADMIN:
+        # Get all users who have access to the same company
+        company_id = context['company'].id
+        user_ids_in_company = session.exec(select(TenantAccess.user_id).where(TenantAccess.company_id == company_id)).all()
+        return session.exec(select(User).where(User.id.in_(user_ids_in_company))).all()
+    
+    raise HTTPException(status_code=403, detail="Unauthorized to view user directory.")
+
+@app.patch("/users/{user_id}")
+def update_user_status(
+    user_id: int, 
+    update_data: dict, 
+    context: dict = Depends(get_active_session_context), 
+    session: Session = Depends(get_session)
+):
+    """Updates user status or resets password with hierarchical checks."""
+    user_to_update = session.get(User, user_id)
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # 1. Permission Logic
+    requester_role = context['active_role']
+    
+    # GLOBAL_ADMIN can update anyone
+    if requester_role != UserRole.GLOBAL_ADMIN:
+        # ADMIN can only update users in their company
+        company_id = context['company'].id
+        access = session.exec(select(TenantAccess).where(
+            TenantAccess.user_id == user_id, 
+            TenantAccess.company_id == company_id
+        )).first()
+        
+        if not access:
+            raise HTTPException(status_code=403, detail="Permission Denied: User is not in your organization.")
+        
+        # COMPANY_ADMIN cannot update higher roles (though in this model all users in company have roles)
+        # Prevent COMPANY_ADMIN from modifying GLOBAL_ADMIN or other COMPANY_ADMINs if needed (here we just allow company wide)
+
+    # 2. Apply Updates
+    for key, value in update_data.items():
+        if hasattr(user_to_update, key):
+            setattr(user_to_update, key, value)
+    
+    session.add(user_to_update)
+    session.commit()
+    session.refresh(user_to_update)
+    return user_to_update
 
 @app.post("/requests/", response_model=ProcurementRequest)
 def create_request(

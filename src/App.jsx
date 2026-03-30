@@ -15,6 +15,7 @@ import AdminSettings from './pages/AdminSettings'
 import TenantOnboarding from './pages/TenantOnboarding'
 import Login from './pages/Login'
 import UserOnboarding from './pages/UserOnboarding'
+import SystemManagement from './pages/SystemManagement'
 
 // --- Status Badge Helper (Stitch exact chip classes) ---
 export function getStatusChipClass(status) {
@@ -122,6 +123,7 @@ function AppContent() {
     { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'] },
     { id: '/onboard-users', label: 'Identities', icon: <Plus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
     { id: '/admin-settings', label: 'Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/system-management', label: 'System Access', icon: <Shield size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
   ]
 
   if (!isAuthenticated) {
@@ -386,6 +388,7 @@ function AppContent() {
                   <Route path="/admin-settings" element={<AdminSettings />} />
                   <Route path="/onboard" element={<TenantOnboarding />} />
                   <Route path="/onboard-users" element={<UserOnboarding />} />
+                  <Route path="/system-management" element={<SystemManagement />} />
                   <Route path="/login" element={<Navigate to="/" />} />
                 </Routes>
               </motion.div>
