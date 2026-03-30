@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Mail, ChevronRight, Building2, UserCircle, ShieldCheck, Fingerprint, ArrowRight, Info, AlertCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { useCompany } from '../App';
