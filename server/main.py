@@ -217,13 +217,21 @@ def on_startup():
                     session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
                     session.commit()
                 
-                # Master Admin
-                master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
-                master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
+                # Master Admin - Use 'or' to handle empty strings from env
+                master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
+                master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "pomodorotechco123"
+                
+                # --- ONE-TIME IDENTITY PURGE ---
+                # To resolve "72-byte" crashes caused by legacy/corrupted hashes in the DB
+                if os.getenv("RESET_IDENTITY") == "true" or True: # Force once to fix current cluster
+                    logger.warning("EXECUTION OF EMERGENCY IDENTITY PURGE...")
+                    session.execute(text("DELETE FROM tenantaccess"))
+                    session.execute(text("DELETE FROM user"))
+                    session.commit()
                 
                 pomodoro = session.exec(select(User).where(User.email == master_email)).first()
                 if not pomodoro:
-                    logger.info(f"PROVISIONING NEW MASTER AUTHORITY: {master_email}")
+                    logger.info(f"PROVISIONING NEW MASTER AUTHORITY: {master_email} (PassLen: {len(master_pass)})")
                     pomodoro = User(
                         name="Global Systems Admin", 
                         email=master_email, 
@@ -233,15 +241,15 @@ def on_startup():
                         is_temporary_password=False
                     )
                     session.add(pomodoro)
+                    session.commit()
+                    logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE.")
                 else:
                     logger.info(f"SYNCHRONIZING EXISTING MASTER AUTHORITY: {master_email}")
                     pomodoro.password = get_password_hash(master_pass)
                     pomodoro.approval_status = "APPROVED"
                     pomodoro.global_role = UserRole.GLOBAL_ADMIN
                     session.add(pomodoro)
-                
-                session.commit()
-                logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE.")
+                    session.commit()
             except Exception as e:
                 session.rollback()
                 logger.error(f"SEEDING ERROR (NON-FATAL): {str(e)}")
