@@ -15,7 +15,7 @@ const UserOnboarding = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: 'password123',
+    password: 'Temporary@2026',
     company_id: '',
     role: 'REQUESTER'
   })

@@ -144,12 +144,15 @@ def on_startup():
                 session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
                 
             # Master Admin (New primary authority)
-            pomodoro = session.exec(select(User).where(User.email == "pomodorotechco@gmail.com")).first()
+            master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com")
+            master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
+            
+            pomodoro = session.exec(select(User).where(User.email == master_email)).first()
             if not pomodoro:
                 pomodoro = User(
-                    name="Pomodoro Admin", 
-                    email="pomodorotechco@gmail.com", 
-                    password="pomodorotechco123",
+                    name="Global Systems Admin", 
+                    email=master_email, 
+                    password=master_pass,
                     global_role=UserRole.GLOBAL_ADMIN,
                     approval_status="APPROVED",
                     is_temporary_password=False

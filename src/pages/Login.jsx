@@ -224,21 +224,6 @@ const Login = ({ onLogin }) => {
         </AnimatePresence>
 
         <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
-          <div style={{ background: 'var(--surface-container-high)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldCheck size={14} /> Master Node Credentials
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-               <div>
-                  <p style={{ fontSize: '0.5rem', color: 'var(--outline)', fontWeight: 900 }}>IDENTITY ID</p>
-                  <p style={{ fontSize: '0.625rem', fontWeight: 700 }}>pomodorotechco@gmail.com</p>
-               </div>
-               <div>
-                  <p style={{ fontSize: '0.5rem', color: 'var(--outline)', fontWeight: 900 }}>SECURE KEY</p>
-                  <p style={{ fontSize: '0.625rem', fontWeight: 700 }}>pomodorotechco123</p>
-               </div>
-            </div>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--outline)' }}>
              <Fingerprint size={14} />
              <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>SECURE ENCRYPTED SESSION</span>
