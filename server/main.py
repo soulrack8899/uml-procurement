@@ -206,7 +206,7 @@ def on_startup():
                 master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
                 master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "pomodorotechco123"
                 
-                # --- ONE-TIME IDENTITY PURGE (DISABLED FOR PRODUCTION) ---
+                # --- ONE-TIME USER DATA PURGE (DISABLED FOR PRODUCTION) ---
                 if os.getenv("RESET_IDENTITY") == "true": # Only purge if specifically requested
                     logger.warning("EXECUTION OF EMERGENCY USER PURGE...")
                     session.execute(text("DELETE FROM tenantaccess"))
@@ -487,7 +487,7 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered.")
     
-    # Create new identity in PENDING status
+    # Create new account in PENDING status
     new_user = User(
         name=user_data.name,
         email=user_data.email,
@@ -536,7 +536,7 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
         session.refresh(user)
     
     if not user:
-        logger.warning(f"LOGIN FAILURE: Identity {email_clean} not found.")
+        logger.warning(f"LOGIN FAILURE: Account {email_clean} not found.")
         raise HTTPException(
             status_code=401, 
             detail=f"Account {email_clean} not found. Please register to continue."
@@ -550,7 +550,7 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
         raise HTTPException(status_code=401, detail="Invalid credentials. Check your password.")
     
     if user.approval_status != "APPROVED":
-        logger.warning(f"LOGIN REJECTION: Identity {email_clean} is {user.approval_status}")
+        logger.warning(f"LOGIN REJECTION: Account {email_clean} is {user.approval_status}")
         raise HTTPException(status_code=403, detail=f"Access Denied: Your account status is {user.approval_status}. Contact your Administrator.")
     
     # Find their primary company for context
@@ -859,8 +859,8 @@ def onboard_user(
     session: Session = Depends(get_session)
 ):
     """
-    Adds a new internal identity. 
-    GOVERNANCE RULES:
+    Adds a new internal user account. 
+    POLICY RULES:
     1. GLOBAL_ADMIN cannot be registered via API (reserved for system owners/Karl).
     2. Only GLOBAL_ADMIN can provision new COMPANY_ADMIN or DIRECTOR roles across any entity.
     3. COMPANY_ADMIN can only onboard REQUESTER, MANAGER, or FINANCE within their own entity.
