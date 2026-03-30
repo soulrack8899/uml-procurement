@@ -12,6 +12,27 @@ from models import (
 )
 from services.po_generator import generate_po_pdf
 from pydantic import BaseModel
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from datetime import timedelta
+
+# Security Contexts
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60 # 30 days for demo
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 # Schema for incoming request data
 class LineItemCreate(BaseModel):
@@ -64,8 +85,8 @@ origins += [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For PoC on Railway, setting to "*" to bypass CORS blocks 
-    allow_credentials=False, # Use False when origin is "*"
+    allow_origins=origins, 
+    allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -152,7 +173,7 @@ def on_startup():
                 pomodoro = User(
                     name="Global Systems Admin", 
                     email=master_email, 
-                    password=master_pass,
+                    password=get_password_hash(master_pass),
                     global_role=UserRole.GLOBAL_ADMIN,
                     approval_status="APPROVED",
                     is_temporary_password=False
@@ -222,23 +243,33 @@ def get_session():
     with Session(engine) as session:
         yield session
 
-# --- Strict Multi-Tenant Authorization with Entity-Specific Roles ---
+# --- Strict Multi-Tenant Authorization with JWT & Entity-Specific Roles ---
 def get_active_session_context(
-    x_company_id: int = Header(...), 
-    x_user_id: int = Header(...), 
+    request: Request,
+    x_company_id: Optional[int] = Header(None), 
     session: Session = Depends(get_session)
 ):
-    user = session.get(User, x_user_id)
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+         raise HTTPException(status_code=401, detail="Unauthorized: Missing or invalid token.")
+    
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload.")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials.")
+
+    user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=403, detail="Forbidden: User not found.")
 
     company = session.get(Company, x_company_id) if x_company_id else None
 
-    # Global Admin bypasses tenant checks, but still needs a company for company-specific actions
+    # Global Admin bypasses tenant checks
     if user.global_role == UserRole.GLOBAL_ADMIN:
-        if x_company_id and not company:
-             raise HTTPException(status_code=404, detail=f"Company {x_company_id} not found.")
-             
         return {
             "company": company,
             "user": user,
@@ -400,7 +431,7 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
         name=user_data.name,
         email=user_data.email,
         phone_number=user_data.phone_number,
-        password=user_data.password, # Will be treated as temporary initially
+        password=get_password_hash(user_data.password), # Use secure hashing
         global_role=UserRole.REQUESTER,
         approval_status="PENDING",
         is_temporary_password=True
@@ -424,16 +455,21 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
 def login(request: LoginRequest, session: Session = Depends(get_session)):
     """Simple login with status and temporary password validation"""
     user = session.exec(select(User).where(User.email == request.email)).first()
-    if not user or user.password != request.password:
+    if not user or not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid identity credentials.")
     
     if user.approval_status != "APPROVED":
         raise HTTPException(status_code=403, detail=f"Access Denied: Your account status is {user.approval_status}. Contact your Administrator.")
     
-    # By default, find their primary company
+    # Find their primary company for context
     primary_access = session.exec(select(TenantAccess).where(TenantAccess.user_id == user.id)).first()
     
+    # Generate Bearer Token
+    access_token = create_access_token(data={"sub": str(user.id)})
+    
     return {
+        "access_token": access_token,
+        "token_type": "bearer",
         "user_id": user.id,
         "user_name": user.name,
         "active_company_id": primary_access.company_id if primary_access else None,
@@ -451,11 +487,11 @@ def change_password(
     session: Session = Depends(get_session)
 ):
     user = context['user']
-    user.password = data.new_password
+    user.password = get_password_hash(data.new_password)
     user.is_temporary_password = False
     session.add(user)
     session.commit()
-    return {"status": "Password Updated Successfully"}
+    return {"status": "SUCCESS", "message": "Identity security key updated in cluster."}
 
 @app.get("/users/", response_model=List[User])
 def list_users(
@@ -507,6 +543,9 @@ def update_user_status(
     # 2. Apply Updates
     for key, value in update_data.items():
         if hasattr(user_to_update, key):
+            # Special case for password hashing during reset
+            if key == "password":
+                value = get_password_hash(value)
             setattr(user_to_update, key, value)
     
     session.add(user_to_update)
@@ -761,7 +800,13 @@ def onboard_user(
          )
 
     # Proceed with creation
-    new_user = User(name=data.name, email=data.email, password=data.password)
+    new_user = User(
+        name=data.name, 
+        email=data.email, 
+        password=get_password_hash(data.password),
+        is_temporary_password=True,
+        approval_status="APPROVED"
+    )
     session.add(new_user)
     try:
         session.commit()

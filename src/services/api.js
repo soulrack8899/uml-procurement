@@ -2,12 +2,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const getHeaders = () => {
   const companyId = localStorage.getItem("currentCompanyId") || "1"; 
-  const userId = localStorage.getItem("currentUserId") || "1"; 
-  return {
+  const token = localStorage.getItem("accessToken");
+  const headers = {
     "Content-Type": "application/json",
-    "X-Company-ID": companyId,
-    "X-User-ID": userId
+    "X-Company-ID": companyId
   };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  return headers;
 };
 
 export const procurementApi = {
@@ -135,7 +140,11 @@ export const procurementApi = {
        const error = await response.json();
        throw new Error(error.detail || "Authentication Failed");
     }
-    return response.json();
+    const data = await response.json();
+    if (data.access_token) {
+      localStorage.setItem("accessToken", data.access_token);
+    }
+    return data;
   },
 
   register: async (userData) => {
