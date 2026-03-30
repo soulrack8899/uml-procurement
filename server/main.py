@@ -135,33 +135,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers=headers
     )
 
-@app.get("/debug/sync-master")
-def force_sync_master(session: Session = Depends(get_session)):
-    """Emergency trigger to force-sync and re-hash Master Admin credentials"""
-    master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
-    master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
-    
-    user = session.exec(select(User).where(User.email == master_email)).first()
-    if not user:
-        user = User(
-            name="Global Systems Admin",
-            email=master_email,
-            password=get_password_hash(master_pass),
-            global_role=UserRole.GLOBAL_ADMIN,
-            approval_status="APPROVED",
-            is_temporary_password=False
-        )
-        session.add(user)
-        msg = f"Master User CREATED and HASHED: {master_email}"
-    else:
-        user.password = get_password_hash(master_pass)
-        user.global_role = UserRole.GLOBAL_ADMIN
-        user.approval_status = "APPROVED"
-        session.add(user)
-        msg = f"Master User UPDATED and RE-HASHED: {master_email}"
-    
-    session.commit()
-    return {"status": "SUCCESS", "message": msg, "target_email": master_email}
 def on_startup():
     """Initializes database and performs safe migrations/seeding on startup"""
     try:
@@ -297,6 +270,34 @@ def on_startup():
 def get_session():
     with Session(engine) as session:
         yield session
+
+@app.get("/debug/sync-master")
+def force_sync_master(session: Session = Depends(get_session)):
+    """Emergency trigger to force-sync and re-hash Master Admin credentials"""
+    master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
+    master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
+    
+    user = session.exec(select(User).where(User.email == master_email)).first()
+    if not user:
+        user = User(
+            name="Global Systems Admin",
+            email=master_email,
+            password=get_password_hash(master_pass),
+            global_role=UserRole.GLOBAL_ADMIN,
+            approval_status="APPROVED",
+            is_temporary_password=False
+        )
+        session.add(user)
+        msg = f"Master User CREATED and HASHED: {master_email}"
+    else:
+        user.password = get_password_hash(master_pass)
+        user.global_role = UserRole.GLOBAL_ADMIN
+        user.approval_status = "APPROVED"
+        session.add(user)
+        msg = f"Master User UPDATED and RE-HASHED: {master_email}"
+    
+    session.commit()
+    return {"status": "SUCCESS", "message": msg, "target_email": master_email}
 
 # --- Strict Multi-Tenant Authorization with JWT & Entity-Specific Roles ---
 def get_active_session_context(
