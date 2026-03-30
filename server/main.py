@@ -28,10 +28,14 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60 # 30 days for demo
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    # Bcrypt has a 72-byte limit; truncate and strip to ensure stability
+    safe_pass = password.strip()[:72]
+    return pwd_context.hash(safe_pass)
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    # Handle potentially long or padded input safely
+    safe_pass = plain_password.strip()[:72]
+    return pwd_context.verify(safe_pass, hashed_password)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
