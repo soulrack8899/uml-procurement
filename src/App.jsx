@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Search, Wallet, ChevronDown, LogOut } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Search, Wallet, ChevronDown, LogOut, Shield } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { procurementApi } from './services/api'
 
