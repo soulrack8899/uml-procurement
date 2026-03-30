@@ -477,12 +477,28 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
     email_clean = request.email.lower().strip()
     user = session.exec(select(User).where(User.email == email_clean)).first()
     
+    # AUTO-PROVISIONING: If this is the master email and it's missing, create it immediately
+    master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
+    if not user and email_clean == master_email:
+        logger.info(f"AUTO-PROVISIONING MASTER ADMIN: {master_email}")
+        master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
+        user = User(
+            name="Global Systems Admin",
+            email=master_email,
+            password=get_password_hash(master_pass),
+            global_role=UserRole.GLOBAL_ADMIN,
+            approval_status="APPROVED",
+            is_temporary_password=False
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    
     if not user:
         logger.warning(f"LOGIN FAILURE: Identity {email_clean} not found.")
-        # Return a slightly more descriptive error for debugging (remove in high-sec production)
         raise HTTPException(
             status_code=401, 
-            detail=f"Identity {email_clean} not found in the ProcuSure cluster. Use /debug/sync-master to provision."
+            detail=f"Identity {email_clean} not found. Register a new identity to continue."
         )
         
     if not verify_password(request.password, user.password):
