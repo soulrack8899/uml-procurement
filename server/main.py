@@ -149,7 +149,9 @@ def on_startup():
                 "ALTER TABLE user ADD COLUMN email VARCHAR",
                 "ALTER TABLE user ADD COLUMN password VARCHAR DEFAULT 'password123'",
                 "ALTER TABLE user ADD COLUMN approval_status VARCHAR DEFAULT 'APPROVED'",
+                "ALTER TABLE user ADD COLUMN global_role VARCHAR DEFAULT 'REQUESTER'",
                 "ALTER TABLE user ADD COLUMN is_temporary_password BOOLEAN DEFAULT 0",
+                "ALTER TABLE user ADD COLUMN phone_number VARCHAR",
                 "ALTER TABLE pettycash ADD COLUMN description VARCHAR DEFAULT 'Petty Cash Claim'"
             ]
             for m in migrations:
@@ -960,4 +962,7 @@ def disburse_pc(pc_id: int, context: dict = Depends(get_active_session_context),
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use Railway provided PORT or fallback to 8080
+    port = int(os.getenv("PORT", 8080))
+    logger.info(f"STARTING SERVER ON PORT {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
