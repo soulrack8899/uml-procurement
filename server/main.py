@@ -179,7 +179,14 @@ def on_startup():
                     is_temporary_password=False
                 )
                 session.add(pomodoro)
-                session.commit()
+            else:
+                # Force re-hash and sync to ensure credentials match environment variables (handles transitions from plain-text)
+                pomodoro.password = get_password_hash(master_pass)
+                pomodoro.approval_status = "APPROVED"
+                session.add(pomodoro)
+                
+            session.commit()
+            if pomodoro:
                 session.refresh(pomodoro)
 
             # Karlos (Transition to Company Admin for UMLAB)
