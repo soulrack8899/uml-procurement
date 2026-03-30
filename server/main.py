@@ -122,22 +122,6 @@ async def force_cors_headers(request: Request, call_next):
 def read_root():
     return {"status": "ok", "service": "ProcuSure SaaS Master API", "timestamp": datetime.utcnow().isoformat()}
 
-@app.get("/debug/code")
-def check_server_code():
-    """Diagnostic to see what hashing logic is actually LIVE on the server"""
-    import inspect
-    try:
-        h_src = inspect.getsource(get_password_hash)
-        v_src = inspect.getsource(verify_password)
-        return {
-            "hashing_logic": h_src,
-            "verification_logic": v_src,
-            "env_master_email": os.getenv("MASTER_ADMIN_EMAIL", "NOT_SET")[:5] + "...",
-            "env_master_pass_len": len(os.getenv("MASTER_ADMIN_PASSWORD", ""))
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     import traceback
@@ -222,9 +206,8 @@ def on_startup():
                 master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
                 master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "pomodorotechco123"
                 
-                # --- ONE-TIME IDENTITY PURGE ---
-                # To resolve "72-byte" crashes caused by legacy/corrupted hashes in the DB
-                if os.getenv("RESET_IDENTITY") == "true" or True: # Force once to fix current cluster
+                # --- ONE-TIME IDENTITY PURGE (DISABLED FOR PRODUCTION) ---
+                if os.getenv("RESET_IDENTITY") == "true": # Only purge if specifically requested
                     logger.warning("EXECUTION OF EMERGENCY IDENTITY PURGE...")
                     session.execute(text("DELETE FROM tenantaccess"))
                     session.execute(text("DELETE FROM user"))
