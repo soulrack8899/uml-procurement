@@ -173,30 +173,32 @@ def on_startup():
             master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
             master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
             
-            pomodoro = session.exec(select(User).where(User.email == master_email)).first()
-            if not pomodoro:
-                pomodoro = User(
-                    name="Global Systems Admin", 
-                    email=master_email, 
-                    password=get_password_hash(master_pass),
-                    global_role=UserRole.GLOBAL_ADMIN,
-                    approval_status="APPROVED",
-                    is_temporary_password=False
-                )
-                session.add(pomodoro)
-                logger.info(f"PROVISIONING MASTER AUTHORITY: {master_email}")
-            else:
-                # Force re-hash and sync to ensure credentials match environment variables
-                logger.info(f"SYNCHRONIZING MASTER AUTHORITY: {master_email}")
-                pomodoro.password = get_password_hash(master_pass)
-                pomodoro.approval_status = "APPROVED"
-                session.add(pomodoro)
+            try:
+                pomodoro = session.exec(select(User).where(User.email == master_email)).first()
+                if not pomodoro:
+                    logger.info(f"PROVISIONING NEW MASTER AUTHORITY: {master_email}")
+                    pomodoro = User(
+                        name="Global Systems Admin", 
+                        email=master_email, 
+                        password=get_password_hash(master_pass),
+                        global_role=UserRole.GLOBAL_ADMIN,
+                        approval_status="APPROVED",
+                        is_temporary_password=False
+                    )
+                    session.add(pomodoro)
+                else:
+                    logger.info(f"SYNCHRONIZING EXISTING MASTER AUTHORITY: {master_email} (Status: {pomodoro.approval_status})")
+                    pomodoro.password = get_password_hash(master_pass)
+                    pomodoro.approval_status = "APPROVED"
+                    pomodoro.global_role = UserRole.GLOBAL_ADMIN # Ensure correct role
+                    session.add(pomodoro)
                 
-            session.commit()
-            logger.info(f"BOOTSTRAP COMPLETE FOR: {master_email}")
-            if pomodoro:
+                session.commit()
                 session.refresh(pomodoro)
-                logger.info(f"Final Master Admin Status: {pomodoro.approval_status} Role: {pomodoro.global_role}")
+                logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE and HASHED.")
+            except Exception as e:
+                session.rollback()
+                logger.error(f"CRITICAL BOOTSTRAP FAILURE: Could not sync master user ({str(e)})")
 
             # Karlos (Transition to Company Admin for UMLAB)
             karlos = session.exec(select(User).where(User.email == "admin@umlab.sarawak.my")).first()
@@ -475,8 +477,14 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
     
     if not user:
         logger.warning(f"LOGIN FAILURE: Identity {email_clean} not found in ecosystem.")
+        # Diagnostic: List active identities if user not found (obfuscate in production)
+        all_users = session.exec(select(User.email)).all()
+        logger.info(f"SYSTEM STATE: {len(all_users)} identities registered. Emails in system: {all_users}")
         raise HTTPException(status_code=401, detail="Invalid identity credentials.")
         
+    # Check if the incoming password is what we expect (Diagnostic)
+    # logger.info(f"DEBUG AUTH: Checking provided password against hash starting with {user.password[:10]}")
+    
     if not verify_password(request.password, user.password):
         logger.warning(f"LOGIN FAILURE: Credential mismatch for {email_clean}")
         raise HTTPException(status_code=401, detail="Invalid identity credentials.")
