@@ -102,7 +102,7 @@ const SystemManagement = () => {
             </p>
           </div>
           <button onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant)', background: 'white', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>
-             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh Ledger
+             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync Identity
           </button>
         </div>
       </div>

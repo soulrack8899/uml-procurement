@@ -234,6 +234,33 @@ def on_startup():
                     pomodoro.global_role = UserRole.GLOBAL_ADMIN
                     session.add(pomodoro)
                     session.commit()
+
+                # --- PROVISION GOVERNANCE TEST IDENTITIES ---
+                merakai = session.exec(select(Company).where(Company.name == "Merakai Indah Sdn Bhd")).first()
+                if merakai:
+                    test_users = [
+                        ("admin@merakai.com", UserRole.ADMIN, "Merakai Admin"),
+                        ("director@merakai.com", UserRole.DIRECTOR, "Merakai Director"),
+                        ("manager@merakai.com", UserRole.MANAGER, "Merakai Manager"),
+                        ("finance@merakai.com", UserRole.FINANCE, "Merakai Finance"),
+                        ("requester@merakai.com", UserRole.REQUESTER, "Merakai Requester")
+                    ]
+                    for t_email, t_role, t_name in test_users:
+                        t_user = session.exec(select(User).where(User.email == t_email)).first()
+                        if not t_user:
+                            logger.info(f"PROVISIONING TEST ROLE: {t_role} for {t_email}")
+                            t_user = User(
+                                name=t_name,
+                                email=t_email,
+                                password=get_password_hash("password123"),
+                                approval_status="APPROVED",
+                                is_temporary_password=False
+                            )
+                            session.add(t_user)
+                            session.commit()
+                            session.refresh(t_user)
+                            session.add(TenantAccess(user_id=t_user.id, company_id=merakai.id, role=t_role))
+                            session.commit()
             except Exception as e:
                 session.rollback()
                 logger.error(f"SEEDING ERROR (NON-FATAL): {str(e)}")
