@@ -34,10 +34,10 @@ const ApprovalView = () => {
           <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>Pending</span>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 900, color: 'var(--primary)' }}>Pending Authorizations</h1>
+          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 900, color: 'var(--primary)' }}>Pending Approvals</h1>
           <span style={{ padding: '0.5rem 1rem', background: 'var(--warning-container)', color: 'white', borderRadius: 'var(--radius-pill)', fontSize: '0.625rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Clock size={12} />
-            {requests.length} ACTIONS
+            {requests.length} PENDING
           </span>
         </div>
       </section>
@@ -45,7 +45,7 @@ const ApprovalView = () => {
       {/* List Container */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {loading ? (
-          <div style={{ padding: '4rem', textAlign: 'center', fontWeight: 700, opacity: 0.5 }} className="animate-pulse">Loading secure ledger...</div>
+          <div style={{ padding: '4rem', textAlign: 'center', fontWeight: 700, opacity: 0.5 }} className="animate-pulse">Loading requests...</div>
         ) : requests.length === 0 ? (
           <div style={{ padding: '4rem', textAlign: 'center', background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)' }}>
             <CheckCircle size={48} style={{ margin: '0 auto 1.5rem', color: 'var(--tertiary)', opacity: 0.2 }} />

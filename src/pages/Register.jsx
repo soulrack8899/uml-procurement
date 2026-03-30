@@ -62,12 +62,12 @@ const Register = () => {
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-container-low)', padding: '2rem' }}>
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ maxWidth: '400px', width: '100%', background: 'var(--surface-container-lowest)', padding: '3rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid rgba(194,198,211,0.2)' }}>
           <CheckCircle2 size={64} style={{ color: 'var(--tertiary)', margin: '0 auto 1.5rem' }} />
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' }}>Registry Updated</h2>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' }}>Registration Submitted</h2>
           <p style={{ color: 'var(--outline)', fontSize: '0.875rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-            Your identity has been indexed. To maintain governance integrity, access must be authorized by a System Admin before first initialization.
+            Your account request has been received. For security, an administrator must approve your access before you can sign in.
           </p>
           <button onClick={() => navigate('/login')} className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer' }}>
-            Back to Terminal
+            Back to Login
           </button>
         </motion.div>
       </div>
@@ -79,15 +79,15 @@ const Register = () => {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: '500px', width: '100%', background: 'var(--surface-container-lowest)', padding: isMobile ? '1.5rem' : '3.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(194,198,211,0.2)', boxShadow: '0 40px 80px rgba(25,28,30,0.1)' }}>
         <div style={{ marginBottom: '2.5rem' }}>
            <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)', fontWeight: 800, fontSize: '0.75rem', textDecoration: 'none', marginBottom: '1.5rem' }}>
-              <ChevronLeft size={16} /> REVERT TO LOGIN
+              <ChevronLeft size={16} /> BACK TO LOGIN
            </Link>
-           <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.04em' }}>Identify Initialization</h1>
-           <p style={{ color: 'var(--outline)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Provision a new identity within the ProcuSure ecosystem.</p>
+           <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.04em' }}>Account Registration</h1>
+           <p style={{ color: 'var(--outline)', fontSize: '0.875rem', marginTop: '0.5rem' }}>Create a new account on the ProcuSure platform.</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div>
-            <label style={S.label}>Full Identity Name</label>
+            <label style={S.label}>Full Name</label>
             <div style={{ position: 'relative' }}>
               <User size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
               <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. John Doe" style={S.input} />
@@ -112,11 +112,11 @@ const Register = () => {
           </div>
 
           <div>
-            <label style={S.label}>Entity Target (Company)</label>
+            <label style={S.label}>Company</label>
             <div style={{ position: 'relative' }}>
               <Building2 size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
               <select required value={formData.company_id} onChange={e => setFormData({...formData, company_id: e.target.value})} style={{ ...S.input, appearance: 'none' }}>
-                <option value="">Select Entity...</option>
+                <option value="">Select Company...</option>
                 {companies.map(c => (
                   <option key={c.id} value={c.id}>{c.name} (ID: {c.id})</option>
                 ))}
@@ -126,14 +126,14 @@ const Register = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
             <div>
-              <label style={S.label}>Security Key</label>
+              <label style={S.label}>Password</label>
               <div style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
                 <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} style={S.input} />
               </div>
             </div>
             <div>
-              <label style={S.label}>Confirm Key</label>
+              <label style={S.label}>Confirm Password</label>
               <div style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
                 <input required type="password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} style={S.input} />
@@ -144,18 +144,18 @@ const Register = () => {
           <div style={{ background: 'var(--surface-container-high)', padding: '1rem', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <Shield size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
             <p style={{ fontSize: '0.625rem', fontWeight: 700, color: 'var(--outline)', lineHeight: 1.4 }}>
-               Identity initialization requires authorization from your Entity Admin. Access will be granted following verification.
+               Account setup requires approval from your Company Admin. Access will be granted once verified.
             </p>
           </div>
 
           <button type="submit" disabled={isLoading} className="gradient-fill" style={{ width: '100%', padding: '1.25rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', cursor: 'pointer', marginTop: '1rem' }}>
-            {isLoading ? 'SYNCING IDENTITY...' : <>INITIALIZE ACCESS <ArrowRight size={18} /></>}
+            {isLoading ? 'REGISTERING...' : <>CREATE ACCOUNT <ArrowRight size={18} /></>}
           </button>
         </form>
 
         <div style={{ marginTop: '2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--outline)' }}>
            <Fingerprint size={14} />
-           <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>SECURE IDENTITY HANDSHAKE</span>
+           <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>SECURE REGISTRATION</span>
         </div>
       </motion.div>
     </div>

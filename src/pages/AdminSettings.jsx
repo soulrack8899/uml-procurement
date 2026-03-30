@@ -38,7 +38,7 @@ const AdminSettings = () => {
 
   if (loading) return (
     <div style={{ padding: '5rem', textAlign: 'center', fontWeight: 700, fontSize: '1.125rem' }} className="animate-pulse">
-      Syncing Governance...
+      Loading Settings...
     </div>
   )
 
@@ -47,13 +47,13 @@ const AdminSettings = () => {
       {/* Header */}
       <div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-           <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)' }}>Governance</span>
+           <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)' }}>Settings</span>
            <ChevronRight size={12} style={{ color: 'var(--outline)' }} />
            <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>Global Controls</span>
         </nav>
-        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>Global Procurement Controls</h1>
+        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>Procurement Settings</h1>
         <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginTop: '0.5rem', maxWidth: '42rem' }}>
-          Configure financial guardrails and ecosystem protocols for {currentCompany?.name}.
+          Configure approval limits and system policies for {currentCompany?.name}.
         </p>
       </div>
 
@@ -65,7 +65,7 @@ const AdminSettings = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <Shield size={24} style={{ color: 'var(--primary)' }} />
-              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 800 }}>Financial Thresholds</h2>
+              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.25rem', fontWeight: 800 }}>Approval Limits</h2>
             </div>
             <span style={{ padding: '0.3rem 0.6rem', background: 'var(--primary-container)', color: 'white', borderRadius: 'var(--radius-pill)', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase' }}>Active</span>
           </div>
@@ -77,7 +77,7 @@ const AdminSettings = () => {
                   <span style={{ position: 'absolute', left: 0, bottom: '0.75rem', color: 'var(--primary)', fontWeight: 900, fontSize: '1.5rem' }}>RM</span>
                   <input type="text" value={threshold} onChange={(e) => setThreshold(e.target.value)} style={{ width: '100%', paddingLeft: '3rem', paddingBottom: '0.5rem', background: 'transparent', border: 'none', borderBottom: '2px solid var(--outline-variant)', fontWeight: 900, fontSize: '1.75rem', color: 'var(--primary)', outline: 'none' }} />
                 </div>
-                <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--outline)' }}>Transactions exceeding this value require Board authorization.</p>
+                <p style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--outline)' }}>Transactions exceeding this value require Director approval.</p>
              </div>
 
              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '2rem' }}>
@@ -97,7 +97,7 @@ const AdminSettings = () => {
 
           <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '1px solid rgba(194,198,211,0.1)', display: 'flex', justifyContent: 'flex-end' }}>
              <button onClick={handleSave} disabled={saving} className="gradient-fill" style={{ padding: '0.75rem 2.5rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Syncing...' : 'Update Controls'}
+                {saving ? 'Saving...' : 'Update Settings'}
              </button>
           </div>
         </section>
@@ -124,8 +124,8 @@ const AdminSettings = () => {
           <section style={{ background: 'var(--error-container)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
              <AlertTriangle size={32} />
              <div>
-                <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>Channel Lockdown</p>
-                <p style={{ fontSize: '0.75rem', opacity: 0.9 }}>Force freeze all open procurement channels.</p>
+                <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>System Freeze</p>
+                <p style={{ fontSize: '0.75rem', opacity: 0.9 }}>Emergency stop for all procurement requests.</p>
              </div>
           </section>
 
@@ -136,8 +136,8 @@ const AdminSettings = () => {
       <section style={{ background: 'var(--surface-container-low)', padding: isMobile ? '1.5rem' : '2.5rem', borderRadius: 'var(--radius-sm)' }}>
          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2.5rem' }}>
             <div>
-               <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 900 }}>Audit & Transparency</h2>
-               <p style={{ fontSize: '0.875rem', color: 'var(--outline)' }}>Governance protocol retention and logging schedules.</p>
+               <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 900 }}>Activity Logs</h2>
+               <p style={{ fontSize: '0.875rem', color: 'var(--outline)' }}>System log retention and history.</p>
             </div>
             <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}>
                <Download size={14} /> EXPORT TSV LOGS
@@ -195,11 +195,11 @@ const AdminSettings = () => {
       {/* Entity Switch Banner */}
       <section style={{ background: 'var(--primary)', color: 'white', padding: isMobile ? '1.5rem' : '2.5rem', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
          <div>
-            <h4 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Cross-Entity Deployment</h4>
-            <p style={{ fontSize: '0.875rem', opacity: 0.8, maxWidth: '30rem' }}>Managing <strong style={{ textDecoration: 'underline' }}>{currentCompany?.name}</strong>. Switch to cluster oversight for Merakai or Quantum Sense.</p>
+            <h4 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.5rem' }}>Switch Company</h4>
+            <p style={{ fontSize: '0.875rem', opacity: 0.8, maxWidth: '30rem' }}>Managing <strong style={{ textDecoration: 'underline' }}>{currentCompany?.name}</strong>. Switch to management for Merakai or Quantum Sense.</p>
          </div>
          <button style={{ padding: '0.75rem 2rem', background: 'white', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, cursor: 'pointer' }}>
-            Switch Entity Hub
+            Switch Company
          </button>
       </section>
     </div>

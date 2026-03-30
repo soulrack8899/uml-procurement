@@ -33,8 +33,8 @@ const VendorDirectory = () => {
               style={{ background: 'white', width: '100%', maxWidth: '500px', borderRadius: 'var(--radius-lg)', padding: '2.5rem', position: 'relative', boxShadow: '0 50px 100px rgba(0,0,0,0.2)' }}>
               <button onClick={() => setShowRegister(false)} style={{ position: 'absolute', right: '1.5rem', top: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--outline)' }}><X /></button>
               
-              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Vendor Entry</h2>
-              <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '2rem' }}>Onboard a new strategic partner to the ProcuSure directory.</p>
+              <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.75rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Add Vendor</h2>
+              <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '2rem' }}>Add a new vendor to your directory.</p>
               
               <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
@@ -57,7 +57,7 @@ const VendorDirectory = () => {
                 </div>
                 
                 <button type="submit" className="gradient-fill" style={{ width: '100%', marginTop: '1rem', padding: '1rem', borderRadius: 'var(--radius-md)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer' }}>
-                   Commit to Registry
+                   Save Vendor
                 </button>
               </form>
             </motion.div>
@@ -68,7 +68,7 @@ const VendorDirectory = () => {
       {/* Header */}
       <div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-           <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)' }}>Registry</span>
+           <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)' }}>Directory</span>
            <ChevronRight size={12} style={{ color: 'var(--outline)' }} />
            <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>Vendor Directory</span>
         </nav>

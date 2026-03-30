@@ -59,8 +59,8 @@ const PettyCashDashboard = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2.5rem', paddingBottom: '4rem' }}>
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>Petty Cash Hub</h1>
-        <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginTop: '0.25rem' }}> Sarawak Divisional Disbursement Authority</p>
+        <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>Petty Cash Management</h1>
+        <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginTop: '0.25rem' }}>Petty Cash Fund Management</p>
       </div>
 
       {/* Top Grid */}
@@ -87,15 +87,15 @@ const PettyCashDashboard = () => {
 
         {/* Fast-Track Claim Form */}
         <section style={{ background: 'var(--surface-container-lowest)', padding: isMobile ? '1.5rem' : '2.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(194,198,211,0.1)' }}>
-           <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '0.5rem' }}>Fast-Track Claim</h2>
-           <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '2rem' }}>Instant micro-reimbursement protocols.</p>
+           <h2 style={{ fontWeight: 900, fontSize: '1.25rem', marginBottom: '0.5rem' }}>Quick Reimbursement</h2>
+           <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '2rem' }}>Submit small expense claims for quick reimbursement.</p>
 
            <AnimatePresence mode="wait">
               {!showForm ? (
                 <div onClick={() => setShowForm(true)} style={{ border: '2px dashed var(--outline-variant)', padding: '2.5rem', borderRadius: 'var(--radius-sm)', textAlign: 'center', cursor: 'pointer', background: 'var(--surface-container-low)' }}>
                    <Upload size={32} style={{ margin: '0 auto 1rem', color: 'var(--primary)' }} />
-                   <p style={{ fontWeight: 800, fontSize: '0.875rem' }}>Tap to Initiation Claim</p>
-                   <p style={{ fontSize: '0.625rem', color: 'var(--outline)' }}>SECURE ENCRYPTED UPLOAD</p>
+                   <p style={{ fontWeight: 800, fontSize: '0.875rem' }}>Click to Start Claim</p>
+                   <p style={{ fontSize: '0.625rem', color: 'var(--outline)' }}>SECURE UPLOAD</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -115,7 +115,7 @@ const PettyCashDashboard = () => {
                    </div>
                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                       <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, padding: '0.75rem', background: 'transparent', border: '1px solid var(--outline)', borderRadius: 'var(--radius-sm)', fontWeight: 800 }}>CANCEL</button>
-                      <button type="submit" disabled={submitting} className="gradient-fill" style={{ flex: 1, padding: '0.75rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900 }}>{submitting ? 'SYNCING...' : 'DISPATCH'}</button>
+                      <button type="submit" disabled={submitting} className="gradient-fill" style={{ flex: 1, padding: '0.75rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900 }}>{submitting ? 'PROCESSING...' : 'SUBMIT'}</button>
                    </div>
                 </form>
               )}
@@ -128,17 +128,17 @@ const PettyCashDashboard = () => {
          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h2 style={{ fontWeight: 900, fontSize: '1.5rem', color: 'var(--primary)' }}>Recent Activity</h2>
             <button style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-               <Download size={14} /> EXPORT (.TSV)
+               <Download size={14} /> EXPORT DATA
             </button>
          </div>
 
          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {loading ? (
-              <div style={{ padding: '4rem', textAlign: 'center', fontWeight: 800, opacity: 0.5 }}>Synchronizing Ledger...</div>
+              <div style={{ padding: '4rem', textAlign: 'center', fontWeight: 800, opacity: 0.5 }}>Loading history...</div>
             ) : requests.length === 0 ? (
               <div style={{ padding: '4rem', textAlign: 'center', background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)' }}>
                  <CheckCircle2 size={40} style={{ margin: '0 auto 1.5rem', opacity: 0.2 }} />
-                 <p style={{ fontWeight: 800 }}>Log Empty</p>
+                 <p style={{ fontWeight: 800 }}>No recent claims</p>
               </div>
             ) : requests.map((req, i) => (
               <motion.div key={req.id} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', padding: isMobile ? '1rem' : '1.25rem 2rem', background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(194,198,211,0.2)', gap: isMobile ? '1rem' : '2rem' }}>
@@ -163,7 +163,7 @@ const PettyCashDashboard = () => {
 
       {/* Legal Disclaimer */}
       <footer style={{ background: 'var(--surface-container-high)', padding: '1.5rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', color: 'var(--outline)', fontStyle: 'italic' }}>
-         All petty cash disbursements are cryptographically logged and subject to Sarawak State Government audit protocols. Identity biometric verification may be required for RM 1,000+ claims.
+         All petty cash payments are recorded and subject to company audit policies. Verification may be required for large claims.
       </footer>
     </div>
   )

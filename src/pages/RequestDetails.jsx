@@ -58,7 +58,7 @@ const RequestDetails = () => {
 
   if (loading) return (
     <div style={{ padding: '5rem', textAlign: 'center', fontWeight: 700, fontSize: '1.125rem' }} className="animate-pulse">
-      Syncing Ledger...
+      Loading Request...
     </div>
   )
   if (!request) return (
@@ -115,7 +115,7 @@ const RequestDetails = () => {
           
           <div className="surface-card" style={{ padding: isMobile ? '1.5rem' : '2.5rem' }}>
             <div style={{ marginBottom: '2.5rem' }}>
-              <p style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Authorized Value</p>
+              <p style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Total Amount</p>
               <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)' }}>RM {request.total_amount?.toLocaleString()}</h2>
             </div>
 
@@ -140,7 +140,7 @@ const RequestDetails = () => {
                   <FileText size={20} style={{ color: 'var(--on-secondary-container)' }} />
                   <h4 style={{ fontWeight: 800, color: 'var(--on-secondary-container)' }}>Document Ready for PO</h4>
                 </div>
-                <p style={{ fontSize: '0.875rem', color: 'var(--on-secondary-container)', opacity: 0.8, marginBottom: '2rem' }}>Generation will include Sarawak Division digital seals.</p>
+                <p style={{ fontSize: '0.875rem', color: 'var(--on-secondary-container)', opacity: 0.8, marginBottom: '2rem' }}>Generation will include company digital signatures.</p>
                 <button onClick={() => handleTransition('PO_ISSUED', 'Generated PO', activeRole)} className="gradient-fill" style={{ width: '100%', padding: '1rem', color: 'white', borderRadius: 'var(--radius-lg)', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
                    Generate & Issue Purchase Order
                 </button>
@@ -149,7 +149,7 @@ const RequestDetails = () => {
           </div>
 
           <section>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>Audit Trail & Timeline</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>History & Timeline</h3>
             <TimelineView auditLogs={auditLogs} />
           </section>
         </div>
@@ -159,8 +159,8 @@ const RequestDetails = () => {
           
           {canApprove(request.status, activeRole) && (
             <div className="surface-card" style={{ padding: '1.75rem', background: 'var(--surface-container-high)' }}>
-               <h4 style={{ fontWeight: 800, marginBottom: '1rem' }}>Verify Compliance</h4>
-               <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '1.5rem' }}>Review all attached quotations before final authorization.</p>
+               <h4 style={{ fontWeight: 800, marginBottom: '1rem' }}>Review Request</h4>
+               <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '1.5rem' }}>Review all attached quotations before final approval.</p>
                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button onClick={() => handleTransition(getNextStatus(request.status), 'Approved', activeRole)} className="gradient-fill" style={{ padding: '0.875rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 800, cursor: 'pointer' }}>
                     Approve Request
@@ -173,7 +173,7 @@ const RequestDetails = () => {
           )}
 
           <div className="surface-card" style={{ padding: '1.75rem' }}>
-             <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Evidence & Quotations</h4>
+             <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Attachments & Quotations</h4>
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
                 

@@ -38,7 +38,7 @@ const PaymentRequest = () => {
         <button onClick={() => navigate(-1)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: 'var(--outline)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', marginBottom: '1.5rem' }}>
           <ArrowLeft size={16} /> BACK
         </button>
-        <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Initiate Payment</h2>
+        <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>Submit Payment Request</h2>
         <p style={{ fontSize: '1rem', color: 'var(--outline-variant)' }}>Upload invoice and confirm disbursement details.</p>
       </div>
 
@@ -63,7 +63,7 @@ const PaymentRequest = () => {
            </div>
            <div>
               <p style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--primary)' }}>Phase 02</p>
-              <p style={{ fontSize: '0.875rem', fontWeight: 800 }}>Invoice Intake</p>
+              <p style={{ fontSize: '0.875rem', fontWeight: 800 }}>Invoice Upload</p>
            </div>
         </div>
       </section>
@@ -75,7 +75,7 @@ const PaymentRequest = () => {
         <div style={{ background: 'var(--surface-container-lowest)', padding: isMobile ? '1.5rem' : '2.5rem', borderRadius: 'var(--radius-sm)', boxShadow: '0 20px 60px rgba(0,52,111,0.05)', borderLeft: isMobile ? 'none' : '4px solid var(--primary)', borderTop: isMobile ? '4px solid var(--primary)' : 'none' }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
             <div style={{ position: 'relative' }}>
-              <label style={S.label}>Selection Context</label>
+              <label style={S.label}>Purchase Order Reference</label>
               <select style={S.input} value={form.poRef} onChange={e => setForm({...form, poRef: e.target.value})} onFocus={S.focus} onBlur={S.blur}>
                 <option value="PO-2023-SAR-0892">PO-0892 (RM 5,200.00)</option>
                 <option value="PO-2023-SAR-0910">PO-0910 (RM 1,150.00)</option>
@@ -85,17 +85,17 @@ const PaymentRequest = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2.5rem' }}>
               <div>
-                <label style={S.label}>External Invoice ID</label>
+                <label style={S.label}>Invoice Number</label>
                 <input type="text" placeholder="REF_CODE_X" style={S.input} value={form.invoiceNumber} onChange={e => setForm({...form, invoiceNumber: e.target.value})} onFocus={S.focus} onBlur={S.blur} required />
               </div>
               <div>
-                <label style={S.label}>Computed MYR Value</label>
+                <label style={S.label}>Payment Amount (RM)</label>
                 <input type="number" placeholder="0.00" style={S.input} value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} onFocus={S.focus} onBlur={S.blur} required />
               </div>
             </div>
 
             <div>
-              <label style={S.label}>Document Capture</label>
+              <label style={S.label}>Upload Invoice</label>
               <div style={{ border: '2px dashed var(--outline-variant)', borderRadius: '1rem', padding: isMobile ? '2rem' : '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: 'var(--surface-container-low)', cursor: 'pointer' }}>
                 <Upload size={40} style={{ color: 'var(--primary)' }} />
                 <div style={{ textAlign: 'center' }}>
@@ -106,7 +106,7 @@ const PaymentRequest = () => {
             </div>
 
             <button disabled={submitting} type="submit" className="gradient-fill" style={{ width: '100%', padding: '1.25rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', opacity: submitting ? 0.7 : 1 }}>
-               {submitting ? 'Authenticating...' : 'Submit to Treasury'}
+               {submitting ? 'Submitting...' : 'Submit for Payment'}
                <Send size={18} />
             </button>
           </form>
@@ -121,9 +121,9 @@ const PaymentRequest = () => {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {[
-                  { date: 'OCT 24', text: 'Authorization Matrix Clear', active: true },
+                  { date: 'OCT 24', text: 'Approvals Verified', active: true },
                   { date: 'OCT 25', text: 'Vendor Identity Verified', active: true },
-                  { date: 'WAIT', text: 'Treasury Intake Pending', active: false }
+                  { date: 'WAIT', text: 'Finance Processing', active: false }
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '1rem' }}>
                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.active ? 'var(--tertiary)' : 'var(--outline-variant)', marginTop: '0.25rem' }} />

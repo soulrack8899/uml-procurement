@@ -50,13 +50,13 @@ const Dashboard = () => {
       {/* Welcome & Onboarding Guide */}
       <WelcomeGuide activeRole={activeRole} isMobile={isMobile} />
 
-      {/* Tectonic Header Stats */}
+      {/* Performance Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
         
         <StatsCard label="Pending Manager" count={pendingManager} color="var(--secondary)" />
         <StatsCard label="Pending Director" count={pendingDirector} color="var(--tertiary)" />
         <div className="gradient-fill" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, borderRadius: 'var(--radius-xl)', color: 'white', boxShadow: '0 20px 40px rgba(0,77,81,0.15)' }}>
-          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>Success Overview</span>
+          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>Monthly Summary</span>
           <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
             <div>
               <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>{completed.toString().padStart(2, '0')}</p>
@@ -88,7 +88,7 @@ const Dashboard = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {loading ? (
-              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--outline)' }}>Syncing with ledger...</div>
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--outline)' }}>Loading records...</div>
             ) : requests.length === 0 ? (
               <div className="surface-card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--on-surface-variant)' }}>No recent activity to display.</div>
             ) : requests.slice(0, 5).map((req, idx) => (
@@ -110,9 +110,9 @@ const Dashboard = () => {
 
           <div style={{ background: 'var(--primary-fixed)', padding: '2rem', borderRadius: 'var(--radius-xl)', position: 'relative', overflow: 'hidden' }}>
             <ShieldCheck size={120} style={{ position: 'absolute', right: -20, bottom: -20, opacity: 0.1, color: 'var(--primary)' }} />
-            <h4 style={{ fontFamily: 'var(--font-bold)', fontSize: '1.25rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Governance Policy</h4>
+            <h4 style={{ fontFamily: 'var(--font-bold)', fontSize: '1.25rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Expenditure Policy</h4>
             <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', lineHeight: 1.6 }}>
-               Procurements exceeding <strong>RM 5,000</strong> require Executive Director clearance.
+               Orders exceeding <strong>RM 5,000</strong> require Executive Director approval.
             </p>
           </div>
         </div>
@@ -205,27 +205,27 @@ const WelcomeGuide = ({ activeRole, isMobile }) => {
 
   const roleGuides = {
     GLOBAL_ADMIN: {
-      title: "System Master Command",
-      desc: "As the Global Admin, you are the final authority. Oversee all entities, provision new company admins, and ensure global governance standards are met across the ProcuSure ecosystem.",
-      steps: ["Register new Company entities", "Provision Entity Admins and Directors", "Monitor global audit logs"]
+      title: "System Administrator",
+      desc: "As the Global Admin, you are the final authority. Manage all companies, add new administrators, and ensure system standards are maintained across the ProcuSure platform.",
+      steps: ["Register new Company entities", "Add Entity Admins and Directors", "Monitor system audit logs"]
     },
     ADMIN: {
-      title: "Entity Governance Lead",
+      title: "Company Manager",
       desc: "Welcome to your organization's control center. You manage company settings, internal user onboarding, and vendor directories for your specific organization.",
       steps: ["Onboard Internal Staff", "Add/Update Vendor Directory", "Configure Approval Thresholds"]
     },
     DIRECTOR: {
-      title: "Executive Authorization",
-      desc: "You are responsible for high-value strategic spend. Your clearance is required for all procurements exceeding company thresholds (e.g., > RM 5,000).",
+      title: "Executive Approval",
+      desc: "You are responsible for high-value strategic spend. Your approval is required for all orders exceeding company thresholds (e.g., > RM 5,000).",
       steps: ["Review high-value requests", "Authorized overrides", "Executive expenditure trends"]
     },
     MANAGER: {
-      title: "Operational Approval",
+      title: "Manager Approval",
       desc: "You oversee day-to-day unit spending. Review and approve standard procurement requests from your team within defined limits.",
       steps: ["Review standard requests", "Track team procurement metrics", "Authorize petty cash"]
     },
     REQUESTER: {
-      title: "Expedited Procurement",
+      title: "Staff Requests",
       desc: "Efficiency starts here. Initiate new procurement requests or claim petty cash for operational needs. Track your items through the approval cycle in real-time.",
       steps: ["Submit new Request", "Attach Quotations for > RM 1k", "Track status in Dashboard"]
     }
@@ -265,7 +265,7 @@ const WelcomeGuide = ({ activeRole, isMobile }) => {
            </div>
 
            <div style={{ gridColumn: isMobile ? 'auto' : 'span 5', borderLeft: isMobile ? 'none' : '1px solid var(--outline-variant-low)', paddingLeft: isMobile ? 0 : '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--outline)', letterSpacing: '0.1em' }}>Spending Lifecycle</h4>
+              <h4 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--outline)', letterSpacing: '0.1em' }}>Approval Workflow</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                  <FlowStep active icon={<FileText size={14}/>} label="Submission" />
                  <FlowStep active icon={<Gavel size={14}/>} label="Management Review" />

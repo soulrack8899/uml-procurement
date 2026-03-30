@@ -208,7 +208,7 @@ def on_startup():
                 
                 # --- ONE-TIME IDENTITY PURGE (DISABLED FOR PRODUCTION) ---
                 if os.getenv("RESET_IDENTITY") == "true": # Only purge if specifically requested
-                    logger.warning("EXECUTION OF EMERGENCY IDENTITY PURGE...")
+                    logger.warning("EXECUTION OF EMERGENCY USER PURGE...")
                     session.execute(text("DELETE FROM tenantaccess"))
                     session.execute(text("DELETE FROM user"))
                     session.commit()
@@ -228,14 +228,14 @@ def on_startup():
                     session.commit()
                     logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE.")
                 else:
-                    logger.info(f"SYNCHRONIZING EXISTING MASTER AUTHORITY: {master_email}")
+                    logger.info(f"UPDATING MASTER ADMIN AUTHORITY: {master_email}")
                     pomodoro.password = get_password_hash(master_pass)
                     pomodoro.approval_status = "APPROVED"
                     pomodoro.global_role = UserRole.GLOBAL_ADMIN
                     session.add(pomodoro)
                     session.commit()
 
-                # --- PROVISION GOVERNANCE TEST IDENTITIES ---
+                # --- PROVISION TEST ACCOUNTS ---
                 merakai = session.exec(select(Company).where(Company.name == "Merakai Indah Sdn Bhd")).first()
                 if merakai:
                     test_users = [
@@ -474,7 +474,7 @@ def whoami(context: dict = Depends(get_active_session_context), session: Session
         "active_role": context['active_role'],
         "global_role": context['user'].global_role,
         "role_info": capabilities,
-        "governance": {
+        "policy": {
             "threshold": threshold,
             "currency": "RM"
         }
@@ -485,7 +485,7 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
     # Check if user already exists
     existing = session.exec(select(User).where(User.email == user_data.email)).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Identity ID already registered in ecosystem cluster.")
+        raise HTTPException(status_code=400, detail="Email already registered.")
     
     # Create new identity in PENDING status
     new_user = User(
@@ -510,7 +510,7 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
         else:
             raise HTTPException(status_code=404, detail="Entity target not found.")
             
-    return {"status": "SUCCESS", "user_id": new_user.id, "message": "Identity registered. Pending governance authorization."}
+    return {"status": "SUCCESS", "user_id": new_user.id, "message": "User registered. Pending account approval."}
 
 @app.post("/session/login")
 def login(request: LoginRequest, session: Session = Depends(get_session)):
@@ -539,7 +539,7 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
         logger.warning(f"LOGIN FAILURE: Identity {email_clean} not found.")
         raise HTTPException(
             status_code=401, 
-            detail=f"Identity {email_clean} not found. Register a new identity to continue."
+            detail=f"Account {email_clean} not found. Please register to continue."
         )
         
     if not verify_password(request.password, user.password):
@@ -547,7 +547,7 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
         # Identify if it's the master user having issues
         if email_clean == os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip():
              logger.info("MASTER AUTH ATTEMPT: Comparing against hash prefix " + user.password[:8])
-        raise HTTPException(status_code=401, detail="Invalid identity credentials. Check password or sync via /debug/sync-master")
+        raise HTTPException(status_code=401, detail="Invalid credentials. Check your password.")
     
     if user.approval_status != "APPROVED":
         logger.warning(f"LOGIN REJECTION: Identity {email_clean} is {user.approval_status}")
@@ -583,7 +583,7 @@ def change_password(
     user.is_temporary_password = False
     session.add(user)
     session.commit()
-    return {"status": "SUCCESS", "message": "Identity security key updated in cluster."}
+    return {"status": "SUCCESS", "message": "Password updated successfully."}
 
 @app.get("/users/", response_model=List[User])
 def list_users(
@@ -809,7 +809,7 @@ def transition_status(
         to_status=target_status,
         user_name=context['user'].name,
         user_role=context['active_role'],
-        notes=f"Authorized under {context['company'].name} governance policy."
+        notes=f"Authorized under {context['company'].name} policy."
     )
     session.add(log)
     session.add(request)
@@ -835,7 +835,7 @@ def onboard_company(
 ):
     """Provisions a new enterprise tenant and default settings"""
     if context['active_role'] != UserRole.GLOBAL_ADMIN:
-        raise HTTPException(status_code=403, detail="Authorized Global Admin clearance required for entity provisioning.")
+        raise HTTPException(status_code=403, detail="Global Admin clearance required for company setup.")
         
     session.add(company)
     session.commit()
@@ -904,7 +904,7 @@ def onboard_user(
         session.commit()
     except Exception:
         session.rollback()
-        raise HTTPException(status_code=400, detail="Identity creation failed (Identity might already exist).")
+        raise HTTPException(status_code=400, detail="User creation failed (Email might already be registered).")
         
     session.refresh(new_user)
     

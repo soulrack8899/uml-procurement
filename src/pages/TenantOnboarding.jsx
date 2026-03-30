@@ -52,10 +52,10 @@ const TenantOnboarding = () => {
                 <Globe size={40} />
               </div>
               <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.75rem' : '3rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1rem' }}>
-                Enterprise Provisioning
+                Set Up New Company
               </h1>
               <p style={{ color: 'var(--outline)', maxWidth: '32rem', margin: '0 auto', fontSize: '0.875rem' }}>
-                Initialize a secure, isolated ledger environment within the ProcuSure ecosystem. Sarawak regional compliance standards are automatically applied.
+                Create a secure workspace for your company. Standard procurement rules and approval workflows will be automatically configured.
               </p>
             </div>
 
@@ -67,14 +67,14 @@ const TenantOnboarding = () => {
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem' }}>
                   <div>
-                    <label style={S.label}>Corporate Entity Name</label>
+                    <label style={S.label}>Company Name</label>
                     <input type="text" required value={formData.name}
                       onChange={e => setFormData({...formData, name: e.target.value})}
                       placeholder="e.g. Advanced Tech Lab"
                       style={S.input} />
                   </div>
                   <div>
-                    <label style={S.label}>Operational Domain (Optional)</label>
+                    <label style={S.label}>Company Domain (Optional)</label>
                     <input type="text" value={formData.domain}
                       onChange={e => setFormData({...formData, domain: e.target.value})}
                       placeholder="e.g. advtech.co.uk (or leave blank)"
@@ -86,19 +86,19 @@ const TenantOnboarding = () => {
                 <div style={{ background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)', padding: '1.5rem' }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
                       <Shield size={16} style={{ color: 'var(--primary)' }} />
-                      <h3 style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Infrastructure Guardrails</h3>
+                      <h3 style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>System Configuration</h3>
                    </div>
                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <Zap size={14} style={{ marginTop: 2, color: 'var(--tertiary)', flexShrink: 0 }} />
                         <p style={{ fontSize: '0.8125rem', color: 'var(--outline)' }}>
-                           <span style={{ fontWeight: 800, color: 'var(--on-surface)' }}>Automatic Provisioning:</span> RM 5,000 divisional petty cash allocation will be seeded.
+                           <span style={{ fontWeight: 800, color: 'var(--on-surface)' }}>Initial Fund:</span> RM 5,000 petty cash fund will be allocated.
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <Database size={14} style={{ marginTop: 2, color: 'var(--primary)', flexShrink: 0 }} />
                         <p style={{ fontSize: '0.8125rem', color: 'var(--outline)' }}>
-                           <span style={{ fontWeight: 800, color: 'var(--on-surface)' }}>Ledger Integrity:</span> Cryptographic UUID generation for immutable transactional records.
+                           <span style={{ fontWeight: 800, color: 'var(--on-surface)' }}>Data Security:</span> Secure tracking for all procurement requests and records.
                         </p>
                       </div>
                    </div>
@@ -110,7 +110,7 @@ const TenantOnboarding = () => {
                   borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer',
                   opacity: submitting ? 0.5 : 1
                 }}>
-                  {submitting ? 'SYNCHRONIZING SECURE TUNNEL...' : 'AUTHORIZE PROVISIONING'}
+                  {submitting ? 'CREATING COMPANY...' : 'CREATE COMPANY'}
                 </button>
               </form>
             </div>
@@ -131,7 +131,7 @@ const TenantOnboarding = () => {
               <CheckCircle size={56} />
             </div>
             <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.75rem' : '2.5rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '0.5rem' }}>
-              Ledger Initialized
+              Company Set Up Complete
             </h1>
             <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>
                TENANT ID: {newCompany?.name || 'MAPPED'}
@@ -145,7 +145,7 @@ const TenantOnboarding = () => {
               fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase',
               borderRadius: 'var(--radius-sm)', border: 'none', cursor: 'pointer'
             }}>
-              Enter Environment <ArrowRight size={18} />
+              Go to Dashboard <ArrowRight size={18} />
             </button>
           </motion.div>
         )}

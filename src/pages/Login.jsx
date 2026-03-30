@@ -72,7 +72,7 @@ const Login = ({ onLogin }) => {
       setShowPwdChange(false);
       setError("");
       setPassword(newPassword);
-      alert("Password updated successfully. Please authorize access now.");
+      alert("Password updated successfully. Please sign in now.");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -123,7 +123,7 @@ const Login = ({ onLogin }) => {
             }}>ProcuSure</h1>
           </div>
           <p style={{ color: 'var(--outline)', fontSize: '0.875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            Identity Infrastructure Access
+            Sign in to ProcuSure
           </p>
         </div>
 
@@ -145,21 +145,21 @@ const Login = ({ onLogin }) => {
             >
               <div style={{ background: 'var(--tertiary-container)', color: 'var(--on-tertiary-container)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 600, display: 'flex', gap: '0.75rem' }}>
                 <KeyRound size={18} />
-                <span>Temporary password detected. Please establish a new security protocol.</span>
+                <span>Please set a new password for your account.</span>
               </div>
               
               <div>
-                <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>New Security Key</label>
+                <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>New Password</label>
                 <input required type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 600, color: 'var(--primary)' }} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Confirm Security Key</label>
+                <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Confirm Password</label>
                 <input required type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 600, color: 'var(--primary)' }} />
               </div>
 
               <button disabled={isLoading} className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer' }}>
-                {isLoading ? 'Updating...' : 'Initialize New Protocol'}
+                {isLoading ? 'Updating...' : 'Set New Password'}
               </button>
             </motion.form>
           ) : forgotPwd ? (
@@ -171,12 +171,12 @@ const Login = ({ onLogin }) => {
                style={{ textAlign: 'center' }}
             >
                <AlertCircle size={48} style={{ color: 'var(--primary)', marginBottom: '1.5rem' }} />
-               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '1rem' }}>Credential Recovery</h2>
+               <h2 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '1rem' }}>Account Recovery</h2>
                <p style={{ fontSize: '0.875rem', color: 'var(--outline)', lineHeight: 1.6, marginBottom: '2rem' }}>
-                  To maintain ledger integrity, password resets must be authorized by a System Admin.
-                  Please contact your **Company Admin** or the **Global Admin** to request a temporary access key.
+                  For security reasons, password resets must be authorized by an Administrator.
+                  Please contact your **Company Admin** or the **Global Admin** to receive a temporary reset code.
                </p>
-               <button onClick={() => setForgotPwd(false)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Back to Terminal</button>
+               <button onClick={() => setForgotPwd(false)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Back to Login</button>
             </motion.div>
           ) : (
             <motion.form 
@@ -186,7 +186,7 @@ const Login = ({ onLogin }) => {
               onSubmit={handleManualLogin} 
               style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}
             >
-                <h2 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Login Terminal</h2>
+                <h2 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Member Login</h2>
                 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Work Email</label>
@@ -198,8 +198,8 @@ const Login = ({ onLogin }) => {
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <label style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase' }}>Security Protocol</label>
-                    <button type="button" onClick={() => setForgotPwd(true)} style={{ background: 'none', border: 'none', fontSize: '0.625rem', fontWeight: 900, color: 'var(--primary)', cursor: 'pointer' }}>FORGOT KEY?</button>
+                    <label style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase' }}>Password</label>
+                    <button type="button" onClick={() => setForgotPwd(true)} style={{ background: 'none', border: 'none', fontSize: '0.625rem', fontWeight: 900, color: 'var(--primary)', cursor: 'pointer' }}>Forgot Password?</button>
                   </div>
                   <div style={{ position: 'relative' }}>
                     <Lock size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
@@ -211,12 +211,12 @@ const Login = ({ onLogin }) => {
                 </div>
 
                 <button disabled={isLoading} className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    {isLoading ? 'Verifying...' : <>Authorize Access <ArrowRight size={18} /></>}
+                    {isLoading ? 'Verifying...' : <>Sign In <ArrowRight size={18} /></>}
                 </button>
 
                 <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                    <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 600 }}>
-                      New to the ecosystem? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 900, textDecoration: 'none' }}>REGISTER NEW IDENTITY</Link>
+                      New to the platform? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 900, textDecoration: 'none' }}>CREATE AN ACCOUNT</Link>
                    </p>
                 </div>
             </motion.form>
@@ -226,7 +226,7 @@ const Login = ({ onLogin }) => {
         <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--outline)' }}>
              <Fingerprint size={14} />
-             <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>SECURE ENCRYPTED SESSION</span>
+             <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>SECURE LOGIN SESSION</span>
           </div>
         </div>
       </motion.div>

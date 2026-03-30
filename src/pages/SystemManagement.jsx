@@ -27,7 +27,7 @@ const SystemManagement = () => {
       setUsers(userData);
       setCompanies(companyData);
     } catch (err) {
-      console.error("Management Data Sync Failure:", err);
+      console.error("Data Loading Error:", err);
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ const SystemManagement = () => {
         is_temporary_password: true 
       });
       setUsers(users.map(u => u.id === userId ? { ...u, password: newPass, is_temporary_password: true } : u));
-      alert("Password reset completed. Provide the temporary key to the user.");
+      alert("Password reset completed. Provide the temporary password to the user.");
     } catch (err) {
       alert(err.message);
     } finally {
@@ -88,21 +88,21 @@ const SystemManagement = () => {
       {/* Header */}
       <div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-           <span style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>Governance Cluster</span>
+           <span style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>System Settings</span>
            <ChevronRight size={12} style={{ color: 'var(--outline)' }} />
-           <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>Identity Management</span>
+           <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>User Accounts</span>
         </nav>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
-               Administrative Oversight
+               System Management
             </h1>
             <p style={{ color: 'var(--outline)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-               {activeRole === 'GLOBAL_ADMIN' ? 'Full platform jurisdiction: Reset passwords, manage IDs, and authorize company admins.' : 'Entity-specific oversight: Manage user lifecycle within your organization.'}
+               {activeRole === 'GLOBAL_ADMIN' ? 'Full control: Reset passwords, manage users, and approve company administrators.' : 'Company management: Control user access for your organization.'}
             </p>
           </div>
           <button onClick={fetchData} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant)', background: 'white', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>
-             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Sync Identity
+             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Refresh List
           </button>
         </div>
       </div>
@@ -110,10 +110,10 @@ const SystemManagement = () => {
       {/* Stats Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '1.5rem' }}>
          {[
-           { label: 'Total Identities', val: users.length, icon: <Users size={20} />, color: 'var(--primary)' },
-           { label: 'Pending Approval', val: users.filter(u => u.approval_status === 'PENDING').length, icon: <Fingerprint size={20} />, color: 'var(--tertiary)' },
-           { label: 'Platform Admins', val: users.filter(u => u.global_role === 'GLOBAL_ADMIN').length, icon: <ShieldCheck size={20} />, color: 'var(--secondary)' },
-           { label: 'Temporary Keys', val: users.filter(u => u.is_temporary_password).length, icon: <Key size={20} />, color: 'var(--outline)' }
+           { label: 'Total Users', val: users.length, icon: <Users size={20} />, color: 'var(--primary)' },
+           { label: 'Awaiting Approval', val: users.filter(u => u.approval_status === 'PENDING').length, icon: <Fingerprint size={20} />, color: 'var(--tertiary)' },
+           { label: 'Global Administrators', val: users.filter(u => u.global_role === 'GLOBAL_ADMIN').length, icon: <ShieldCheck size={20} />, color: 'var(--secondary)' },
+           { label: 'Temporary Passwords', val: users.filter(u => u.is_temporary_password).length, icon: <Key size={20} />, color: 'var(--outline)' }
          ].map((s, i) => (
            <div key={i} style={{ ...S.card, padding: '1.5rem', borderLeft: `4px solid ${s.color}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--outline)' }}>
@@ -130,7 +130,7 @@ const SystemManagement = () => {
            <div style={{ display: 'flex', flex: 1, minWidth: '280px', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-pill)', padding: '0.5rem 1.25rem', alignItems: 'center', gap: '0.75rem' }}>
               <Search size={18} style={{ color: 'var(--outline)' }} />
               <input 
-                placeholder="Search by name, email or ID..." 
+                placeholder="Find users..." 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontWeight: 600, fontSize: '0.875rem' }} 
@@ -153,9 +153,9 @@ const SystemManagement = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--surface-container-low)' }}>
-                <th style={S.th}>Identity ID</th>
-                <th style={S.th}>Name / Role</th>
-                <th style={S.th}>Security Protocol (Key)</th>
+                <th style={S.th}>User ID</th>
+                <th style={S.th}>User Details</th>
+                <th style={S.th}>Stored Credentials</th>
                 <th style={S.th}>Approval Status</th>
                 <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
               </tr>
@@ -194,7 +194,7 @@ const SystemManagement = () => {
                   <td style={{ ...S.td, textAlign: 'right' }}>
                      <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
                         {user.approval_status === 'PENDING' && (
-                           <button onClick={() => handleUpdateStatus(user.id, 'APPROVED')} className="gradient-fill" style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: 'var(--radius-pill)', color: 'white', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Authorize</button>
+                           <button onClick={() => handleUpdateStatus(user.id, 'APPROVED')} className="gradient-fill" style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: 'var(--radius-pill)', color: 'white', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Approve</button>
                         )}
                         {user.approval_status === 'APPROVED' && user.global_role !== 'GLOBAL_ADMIN' && (
                            <button onClick={() => handleUpdateStatus(user.id, 'SUSPENDED')} style={{ padding: '0.5rem 1rem', background: 'none', border: '1px solid var(--error)', borderRadius: 'var(--radius-pill)', color: 'var(--error)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Suspend</button>
@@ -202,7 +202,7 @@ const SystemManagement = () => {
                         {user.approval_status === 'SUSPENDED' && (
                            <button onClick={() => handleUpdateStatus(user.id, 'APPROVED')} style={{ padding: '0.5rem 1rem', background: 'none', border: '1px solid var(--tertiary)', borderRadius: 'var(--radius-pill)', color: 'var(--tertiary)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Reactivate</button>
                         )}
-                        <button onClick={() => handleResetPassword(user.id)} title="Reset Security Key" style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-pill)', cursor: 'pointer' }}>
+                        <button onClick={() => handleResetPassword(user.id)} title="Reset Password" style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-pill)', cursor: 'pointer' }}>
                            <RefreshCw size={14} />
                         </button>
                      </div>
@@ -214,7 +214,7 @@ const SystemManagement = () => {
           {filteredUsers.length === 0 && (
             <div style={{ padding: '5rem', textAlign: 'center', color: 'var(--outline)' }}>
                <ShieldAlert size={48} style={{ margin: '0 auto 1.5rem', opacity: 0.2 }} />
-               <p style={{ fontWeight: 700 }}>No matching identities found in registry.</p>
+               <p style={{ fontWeight: 700 }}>No users found.</p>
             </div>
           )}
         </div>

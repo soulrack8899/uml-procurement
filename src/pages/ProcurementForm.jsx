@@ -54,7 +54,7 @@ const ProcurementForm = () => {
 
     const total = calculateTotal()
     if (total > 1000 && !quotationUrl) {
-        if (!window.confirm("Standard governance requires a quotation for spends over RM 1,000. Proceed anyway?")) {
+        if (!window.confirm("Standard policy requires a quotation for spending over RM 1,000. Proceed anyway?")) {
             return;
         }
     }
@@ -80,7 +80,7 @@ const ProcurementForm = () => {
       if (res && res.id) {
         navigate(`/request/${res.id}`)
       } else {
-        throw new Error("Server communication anomaly: ID not returned.")
+        throw new Error("Error: Request ID not returned by server.")
       }
     } catch (err) {
       alert("Submission Error: " + err.message)
@@ -112,7 +112,7 @@ const ProcurementForm = () => {
         </div>
         <div style={{ padding: '0.5rem 1.25rem', background: 'var(--primary-container)', borderRadius: 'var(--radius-pill)', color: 'var(--on-primary-container)', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)' }} />
-          Drafting Mode
+          Drafting Request
         </div>
       </div>
 
@@ -121,14 +121,14 @@ const ProcurementForm = () => {
         <div style={S.card}>
           <div style={{ background: 'var(--surface-container-high)', padding: '1.5rem 2.5rem', borderBottom: '1px solid rgba(194,198,211,0.1)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
              <FileText size={20} style={{ color: 'var(--primary)' }} />
-             <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)' }}>Composition Details</h2>
+             <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)' }}>Request Details</h2>
           </div>
           
           <form style={{ padding: isMobile ? '1.5rem' : '3rem' }}>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', marginBottom: '4rem' }}>
                <div>
-                  <label style={S.label}>Expenditure Title / Reference</label>
+                  <label style={S.label}>Request Title</label>
                   <input placeholder="e.g. Q3 Laboratory Reagent Replenishment" value={title} onChange={e => setTitle(e.target.value)} style={S.input} />
                </div>
                
@@ -138,7 +138,7 @@ const ProcurementForm = () => {
                     <input required placeholder="Start typing vendor name..." value={vendor.name} onChange={e => setVendor({...vendor, name: e.target.value})} style={S.input} />
                   </div>
                   <div>
-                    <label style={S.label}>Vendor Identification Code</label>
+                    <label style={S.label}>Vendor ID</label>
                     <input placeholder="V-XXXX" value={vendor.id} onChange={e => setVendor({...vendor, id: e.target.value})} style={{ ...S.input, color: 'var(--outline)' }} />
                   </div>
                </div>
@@ -146,7 +146,7 @@ const ProcurementForm = () => {
 
             <div style={{ marginBottom: '4rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Line Items Decomposition</h3>
+                <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Item Details</h3>
                 <button type="button" onClick={addItem} style={{ padding: '0.5rem 1rem', background: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-pill)', color: 'white', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Plus size={14} /> Add Item
                 </button>
@@ -174,7 +174,7 @@ const ProcurementForm = () => {
                       <input placeholder="PCS" value={item.uom} onChange={e => handleItemChange(i, 'uom', e.target.value)} style={{ ...S.input, fontSize: '0.875rem', borderBottomColor: 'var(--primary)' }} />
                     </div>
                     <div>
-                      <label style={S.label}>Unit Rate</label>
+                      <label style={S.label}>Unit Price</label>
                       <input type="number" value={item.unitPrice} onChange={e => handleItemChange(i, 'unitPrice', e.target.value)} style={{ ...S.input, fontSize: '0.875rem' }} />
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -192,7 +192,7 @@ const ProcurementForm = () => {
             </div>
 
             <div style={{ marginBottom: '4rem' }}>
-                <label style={S.label}>Critical Documentation</label>
+                <label style={S.label}>Supporting Documents</label>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
                   <motion.div 
                     whileHover={{ scale: 1.01 }}
@@ -234,7 +234,7 @@ const ProcurementForm = () => {
                       <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', margin: 0 }}>Requirement</p>
                     </div>
                     <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', margin: 0 }}>
-                      Governance requires a verified supplier quotation for any expenditure exceeding <strong>RM 1,000.00</strong>. Failure to attach may delay approval.
+                      Company policy requires a supplier quotation for any expenditure over <strong>RM 1,000.00</strong>. Please attach the quotation to avoid delays.
                     </p>
                   </div>
                 </div>
@@ -253,7 +253,7 @@ const ProcurementForm = () => {
                       display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(14, 77, 81, 0.2)', opacity: (submitting || uploading) ? 0.6 : 1
                     }}
                   >
-                    {submitting ? 'Processing...' : <>Dispatch Request <ArrowRight size={20}/></>}
+                    {submitting ? 'Processing...' : <>Submit Request <ArrowRight size={20}/></>}
                   </button>
                </div>
             </div>
@@ -264,19 +264,19 @@ const ProcurementForm = () => {
            <div style={{ ...S.card, padding: '2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
                  <Info size={20} style={{ color: 'var(--primary)' }} />
-                 <h4 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase' }}>Governance Rules</h4>
+                 <h4 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase' }}>Approval Rules</h4>
               </div>
               <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                 <li>Requests exceeding <strong>RM 5,000.00</strong> will be routed to the <strong>Manager</strong> for initial audit.</li>
-                 <li>All procurement actions are logged with a unique hash in the system audit trail.</li>
+                 <li>Requests over <strong>RM 5,000.00</strong> will be sent to the <strong>Manager</strong> for review.</li>
+                 <li>All actions are recorded in the system audit log for security.</li>
                  <li>Ensure UOM (Unit of Measure) is clearly specified for physical goods.</li>
               </ul>
            </div>
 
            <div style={{ background: 'var(--primary)', color: 'white', padding: '2rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 20px 40px rgba(14, 77, 81, 0.15)' }}>
-              <p style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8, marginBottom: '0.5rem' }}>Ecosystem Status</p>
-              <h5 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>Cluster Integrity: High</h5>
-              <p style={{ fontSize: '0.75rem', marginTop: '1rem', opacity: 0.9 }}>Your request will be visible to the {currentCompany?.name} finance division immediately upon dispatch.</p>
+              <p style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8, marginBottom: '0.5rem' }}>System Status</p>
+              <h5 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>System Status: Online</h5>
+              <p style={{ fontSize: '0.75rem', marginTop: '1rem', opacity: 0.9 }}>Your request will be visible to the {currentCompany?.name} finance division immediately upon submission.</p>
            </div>
         </div>
 

@@ -81,7 +81,7 @@ function AppContent() {
         if (initial) selectTenant(initial)
       }
     } catch (err) {
-      console.error("Context Registry Failure:", err)
+      console.error("Failed to load companies:", err)
     }
   }
 
@@ -90,7 +90,7 @@ function AppContent() {
       const { active_role, global_role } = await procurementApi.whoami()
       setActiveRole(global_role === 'GLOBAL_ADMIN' ? 'GLOBAL_ADMIN' : active_role)
     } catch (err) {
-      console.error("Context Identification Failure:", err)
+      console.error("Failed to identify role:", err)
       setActiveRole(null)
     }
   }
@@ -122,7 +122,7 @@ function AppContent() {
     { id: '/payment-request', label: 'Payment Request', icon: <FileText size={20} /> },
     { id: '/vendors', label: 'Vendors', icon: <Users size={20} /> },
     { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'] },
-    { id: '/onboard-users', label: 'Identities', icon: <Plus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/onboard-users', label: 'Users', icon: <Plus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
     { id: '/admin-settings', label: 'Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
     { id: '/system-management', label: 'System Access', icon: <Shield size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
   ]
@@ -205,9 +205,7 @@ function AppContent() {
                     }}>
                       {userName}
                     </p>
-                    <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {activeRole?.replace('_', ' ') || 'Identifying...'}
-                    </p>
+                      {activeRole?.replace('_', ' ') || 'Loading...'}
                   </div>
                 </div>
               </div>
@@ -273,7 +271,7 @@ function AppContent() {
               onMouseLeave={e => e.currentTarget.style.filter = 'none'}
             >
               <Plus size={18} />
-              {(sidebarOpen || isMobile) && <span>New Tenant</span>}
+              {(sidebarOpen || isMobile) && <span>Add Company</span>}
             </Link>
             <button
               onClick={handleLogout}
@@ -348,7 +346,7 @@ function AppContent() {
                     <ChevronDown size={16} style={{ color: 'var(--outline)' }} />
                   </div>
                   <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', fontWeight: 700 }}>
-                    Active Entity Context
+                    Active Workplace
                   </span>
                 </div>
               </div>
@@ -357,7 +355,7 @@ function AppContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ display: isMobile ? 'none' : 'flex', padding: '0.5rem 1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant-low)', gap: '0.5rem', alignItems: 'center' }}>
                 <Search size={16} />
-                <input placeholder="Search ledger..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.875rem', width: '120px' }} />
+                <input placeholder="Search records..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.875rem', width: '120px' }} />
               </div>
               <div style={{ 
                 width: 36, height: 36, borderRadius: 'var(--radius-pill)', overflow: 'hidden',
