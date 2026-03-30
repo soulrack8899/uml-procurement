@@ -27,15 +27,21 @@ SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60 # 30 days for demo
 
+import hashlib
+
 def get_password_hash(password):
-    # Bcrypt has a 72-byte limit; truncate and strip to ensure stability
-    safe_pass = password.strip()[:72]
-    return pwd_context.hash(safe_pass)
+    # Pre-hash with SHA-256 to bypass Bcrypt 72-byte limit and handle long passwords/env-vars safely
+    pre_hash = hashlib.sha256(password.strip().encode()).hexdigest()
+    return pwd_context.hash(pre_hash)
 
 def verify_password(plain_password, hashed_password):
-    # Handle potentially long or padded input safely
-    safe_pass = plain_password.strip()[:72]
-    return pwd_context.verify(safe_pass, hashed_password)
+    # Ensure current input is pre-hashed the same way before verification
+    pre_hash = hashlib.sha256(plain_password.strip().encode()).hexdigest()
+    try:
+        return pwd_context.verify(pre_hash, hashed_password)
+    except Exception as e:
+        logger.error(f"VERIFICATION ERROR: {str(e)}")
+        return False
 
 def create_access_token(data: dict):
     to_encode = data.copy()
