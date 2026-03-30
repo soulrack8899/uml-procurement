@@ -69,19 +69,43 @@ class UserCreate(BaseModel):
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
-# Define origins for CORS
-# This regex dynamically authorizes all ProcuSure-related subdomains on Vercel and Railway
+# Dynamic CORS Handling with Fallback
 allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://uml-procurement-internal.vercel.app", "https://procusure.vercel.app"], # Primary explicit origins
-    allow_origin_regex=allow_origin_regex, # Dynamic regex for previews and internal routing
+    allow_origins=["https://uml-procurement-internal.vercel.app", "https://procusure.vercel.app"],
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+@app.middleware("http")
+async def force_cors_headers(request: Request, call_next):
+    """Fallback middleware to ensure CORS headers are present even for OPTIONS or Errors"""
+    if request.method == "OPTIONS":
+        # Handle Preflights manually if the standard middleware missed it
+        origin = request.headers.get("Origin")
+        return JSONResponse(
+            status_code=200,
+            content="OK",
+            headers={
+                "Access-Control-Allow-Origin": origin if origin else "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Credentials": "true"
+            }
+        )
+    
+    response = await call_next(request)
+    # Ensure response has CORS headers before leaving the server
+    origin = request.headers.get("Origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 @app.get("/")
 def read_root():
