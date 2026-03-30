@@ -135,10 +135,18 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers=headers
     )
 
+@app.on_event("startup")
 def on_startup():
-    """Initializes database and performs safe migrations/seeding on startup"""
+    """Initializes database and performs mission-critical seeding"""
+    logger.info("INITIATING MISSION-CRITICAL DATABASE BOOTSTRAP...")
     try:
+        # Force table registration by checking metadata
+        discovered_tables = list(SQLModel.metadata.tables.keys())
+        logger.info(f"DISCOVERED SCHEMAS IN METADATA: {discovered_tables}")
+        
+        # FATAL: If this fails, the app must not start
         create_db_and_tables()
+        logger.info("DATABASE TABLES CREATED/VERIFIED SUCCESSFULLY.")
         
         # Safe Migration Wrapper - ensures columns exist without crashing if they already do
         from sqlalchemy import text
@@ -162,30 +170,31 @@ def on_startup():
                     session.rollback() # Logic: Column likely already exists
             
             # Safe Bootstrap - only seeds if the standard company doesn't exist
-            statement = select(Company).where(Company.name == "UMLAB Sarawak")
-            if not session.exec(statement).first():
-                # Seed Companies
-                umlab = Company(name="UMLAB Sarawak", domain="umlab.sarawak.my")
-                merakai = Company(name="Merakai Indah Sdn Bhd", domain="merakai.indah.my")
-                quantum = Company(name="Quantum Sense Sdn Bhd", domain="quantumsense.my")
-                session.add_all([umlab, merakai, quantum])
-                session.commit()
-                
-                # Refresh to get IDs
-                session.refresh(umlab)
-                session.refresh(merakai)
-                session.refresh(quantum)
-                
-                # Default settings
-                session.add(CompanySettings(company_id=umlab.id, approval_threshold=5000.0))
-                session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
-                session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
-                
-            # Master Admin (New primary authority)
-            master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
-            master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
-            
             try:
+                statement = select(Company).where(Company.name == "UMLAB Sarawak")
+                if not session.exec(statement).first():
+                    # Seed Companies
+                    umlab = Company(name="UMLAB Sarawak", domain="umlab.sarawak.my")
+                    merakai = Company(name="Merakai Indah Sdn Bhd", domain="merakai.indah.my")
+                    quantum = Company(name="Quantum Sense Sdn Bhd", domain="quantumsense.my")
+                    session.add_all([umlab, merakai, quantum])
+                    session.commit()
+                    
+                    # Refresh to get IDs
+                    session.refresh(umlab)
+                    session.refresh(merakai)
+                    session.refresh(quantum)
+                    
+                    # Default settings
+                    session.add(CompanySettings(company_id=umlab.id, approval_threshold=5000.0))
+                    session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
+                    session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
+                    session.commit()
+                
+                # Master Admin
+                master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
+                master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
+                
                 pomodoro = session.exec(select(User).where(User.email == master_email)).first()
                 if not pomodoro:
                     logger.info(f"PROVISIONING NEW MASTER AUTHORITY: {master_email}")
@@ -199,74 +208,23 @@ def on_startup():
                     )
                     session.add(pomodoro)
                 else:
-                    logger.info(f"SYNCHRONIZING EXISTING MASTER AUTHORITY: {master_email} (Status: {pomodoro.approval_status})")
+                    logger.info(f"SYNCHRONIZING EXISTING MASTER AUTHORITY: {master_email}")
                     pomodoro.password = get_password_hash(master_pass)
                     pomodoro.approval_status = "APPROVED"
-                    pomodoro.global_role = UserRole.GLOBAL_ADMIN # Ensure correct role
+                    pomodoro.global_role = UserRole.GLOBAL_ADMIN
                     session.add(pomodoro)
                 
                 session.commit()
-                session.refresh(pomodoro)
-                logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE and HASHED.")
+                logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE.")
             except Exception as e:
                 session.rollback()
-                logger.error(f"CRITICAL BOOTSTRAP FAILURE: Could not sync master user ({str(e)})")
-
-            # Karlos (Transition to Company Admin for UMLAB)
-            karlos = session.exec(select(User).where(User.email == "admin@umlab.sarawak.my")).first()
-            if karlos:
-                karlos.global_role = UserRole.REQUESTER
-                session.add(karlos)
+                logger.error(f"SEEDING ERROR (NON-FATAL): {str(e)}")
                 
-                # Ensure UMLAB Admin mapping
-                umlab = session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
-                if umlab:
-                    mapping = session.exec(select(TenantAccess).where(TenantAccess.user_id == karlos.id, TenantAccess.company_id == umlab.id)).first()
-                    if not mapping:
-                        session.add(TenantAccess(user_id=karlos.id, company_id=umlab.id, role=UserRole.ADMIN))
-                    else:
-                        mapping.role = UserRole.ADMIN
-                        session.add(mapping)
-                session.commit()
-            
-            # Regional Director
-            johor = session.exec(select(User).where(User.email == "johor@umlab.sarawak.my")).first()
-            if not johor:
-                johor = User(name="Johor Partner", email="johor@umlab.sarawak.my")
-                session.add(johor)
-                session.commit()
-                session.refresh(johor)
-                
-                umlab = session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
-                if umlab:
-                   session.add(TenantAccess(user_id=johor.id, company_id=umlab.id, role=UserRole.DIRECTOR))
-                session.commit()
-                
-                # Demo Procurement Request
-                session.add(ProcurementRequest(
-                    company_id=merakai.id,
-                    created_by=karlos.id,
-                    title="Enterprise Server Rack",
-                    vendor_name="Dell Emc",
-                    vendor_id="V-103",
-                    total_amount=10000.0,
-                    status=StatusEnum.PENDING_DIRECTOR
-                ))
-                
-                # Demo Petty Cash
-                session.add(PettyCash(
-                    company_id=umlab.id,
-                    requester_id=karlos.id,
-                    amount=150.0,
-                    receipt_url="PC-0012",
-                    status=PettyCashStatus.APPROVED
-                ))
-                
-                session.commit()
     except Exception as e:
         import traceback
-        print(f"STARTUP ERROR (NON-FATAL): {str(e)}")
+        logger.error("FATAL DATABASE STARTUP ERROR. CRASHING TO PREVENT ZOMBIE STATE.")
         traceback.print_exc()
+        raise e
 
 # Dependency for DB Session
 def get_session():
