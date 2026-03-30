@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn.error")
 from datetime import datetime
-from sqlmodel import Session, select
+from sqlmodel import Session, select, SQLModel
 from models import (
     engine, create_db_and_tables, ProcurementRequest, LineItem, 
     FileMetadata, AuditLog, StatusEnum, UserRole, Company, 
