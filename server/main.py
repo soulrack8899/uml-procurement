@@ -70,30 +70,17 @@ class UserCreate(BaseModel):
 app = FastAPI(title="UMLAB SaaS Master API")
 
 # Define origins for CORS
-# Using regex allows for dynamically matching preview deployments and subdomains
-allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|http://localhost:.*"
-
-# Define origins for CORS
-origins = [
-    "https://uml-procurement-internal.vercel.app",
-    "https://uml-procurement-internal-production.up.railway.app",
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://localhost:8000"
-]
-
-# Add variants for common deployment URLs
-origins += [
-    "https://www.uml-procurement-internal.vercel.app",
-    "https://procusure.vercel.app", # Placeholder for future custom domain
-]
+# This regex dynamically authorizes all ProcuSure-related subdomains on Vercel and Railway
+allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, 
+    allow_origins=["https://uml-procurement-internal.vercel.app", "https://procusure.vercel.app"], # Primary explicit origins
+    allow_origin_regex=allow_origin_regex, # Dynamic regex for previews and internal routing
     allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 @app.get("/")
