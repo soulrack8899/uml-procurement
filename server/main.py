@@ -3,6 +3,11 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, R
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
+import logging
+
+# Configure diagnostic logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("uvicorn.error")
 from datetime import datetime
 from sqlmodel import Session, select
 from models import (
@@ -165,7 +170,7 @@ def on_startup():
                 session.add(CompanySettings(company_id=quantum.id, approval_threshold=15000.0))
                 
             # Master Admin (New primary authority)
-            master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com")
+            master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
             master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
             
             pomodoro = session.exec(select(User).where(User.email == master_email)).first()
@@ -179,15 +184,19 @@ def on_startup():
                     is_temporary_password=False
                 )
                 session.add(pomodoro)
+                logger.info(f"PROVISIONING MASTER AUTHORITY: {master_email}")
             else:
-                # Force re-hash and sync to ensure credentials match environment variables (handles transitions from plain-text)
+                # Force re-hash and sync to ensure credentials match environment variables
+                logger.info(f"SYNCHRONIZING MASTER AUTHORITY: {master_email}")
                 pomodoro.password = get_password_hash(master_pass)
                 pomodoro.approval_status = "APPROVED"
                 session.add(pomodoro)
                 
             session.commit()
+            logger.info(f"BOOTSTRAP COMPLETE FOR: {master_email}")
             if pomodoro:
                 session.refresh(pomodoro)
+                logger.info(f"Final Master Admin Status: {pomodoro.approval_status} Role: {pomodoro.global_role}")
 
             # Karlos (Transition to Company Admin for UMLAB)
             karlos = session.exec(select(User).where(User.email == "admin@umlab.sarawak.my")).first()
@@ -461,11 +470,19 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
 @app.post("/session/login")
 def login(request: LoginRequest, session: Session = Depends(get_session)):
     """Simple login with status and temporary password validation"""
-    user = session.exec(select(User).where(User.email == request.email)).first()
-    if not user or not verify_password(request.password, user.password):
+    email_clean = request.email.lower().strip()
+    user = session.exec(select(User).where(User.email == email_clean)).first()
+    
+    if not user:
+        logger.warning(f"LOGIN FAILURE: Identity {email_clean} not found in ecosystem.")
+        raise HTTPException(status_code=401, detail="Invalid identity credentials.")
+        
+    if not verify_password(request.password, user.password):
+        logger.warning(f"LOGIN FAILURE: Credential mismatch for {email_clean}")
         raise HTTPException(status_code=401, detail="Invalid identity credentials.")
     
     if user.approval_status != "APPROVED":
+        logger.warning(f"LOGIN REJECTION: Identity {email_clean} is {user.approval_status}")
         raise HTTPException(status_code=403, detail=f"Access Denied: Your account status is {user.approval_status}. Contact your Administrator.")
     
     # Find their primary company for context
