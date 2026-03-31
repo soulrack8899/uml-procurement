@@ -388,10 +388,11 @@ def get_active_session_context(
 
     access = session.exec(select(TenantAccess).where(
         TenantAccess.company_id == x_company_id,
-        TenantAccess.user_id == x_user_id
+        TenantAccess.user_id == user_id
     )).first()
     
     if not access:
+        logger.warning(f"ACCESS DENIED: User {user_id} has no record for company {x_company_id}")
         raise HTTPException(status_code=403, detail="Forbidden: No access record for this user in this entity.")
     
     return {
@@ -937,10 +938,20 @@ def onboard_user(
              detail="Authorization Failure: Entity Admins can only onboard users for their own organization."
          )
 
+    # 5. Normalization: Clean email for consistent identity checks
+    email_clean = data.email.lower().strip()
+    
+    # 6. Check for existence early to avoid transaction noise
+    existing = session.exec(select(User).where(User.email == email_clean)).first()
+    if existing:
+        logger.warning(f"ONBOARDING REJECTION: Email {email_clean} already registered.")
+        raise HTTPException(status_code=400, detail="Account already exists for this email address.")
+
     # Proceed with creation
+    logger.info(f"ONBOARDING USER: {data.name} ({email_clean}) for Company ID {target_company_id}")
     new_user = User(
         name=data.name, 
-        email=data.email, 
+        email=email_clean, 
         password=get_password_hash(data.password),
         is_temporary_password=True,
         approval_status="APPROVED"
@@ -948,17 +959,18 @@ def onboard_user(
     session.add(new_user)
     try:
         session.commit()
-    except Exception:
+        session.refresh(new_user)
+    except Exception as e:
+        logger.error(f"DATABASE ERROR during user creation: {str(e)}")
         session.rollback()
-        raise HTTPException(status_code=400, detail="User creation failed (Email might already be registered).")
+        raise HTTPException(status_code=400, detail="Identity creation failed due to database constraint.")
         
-    session.refresh(new_user)
-    
     if target_company_id:
+        logger.info(f"MAPPING USER {new_user.id} TO COMPANY {target_company_id} WITH ROLE {data.role}")
         session.add(TenantAccess(user_id=new_user.id, company_id=target_company_id, role=data.role))
         session.commit()
-        
-    return {"status": "User Provisioned", "id": new_user.id, "active_entity_id": target_company_id}
+    
+    return {"status": "SUCCESS", "user_id": new_user.id}
 
 @app.patch("/companies/{company_id}", response_model=Company)
 def update_company(
