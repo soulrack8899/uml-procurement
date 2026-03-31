@@ -171,7 +171,13 @@ def on_startup():
                 "ALTER TABLE user ADD COLUMN global_role VARCHAR DEFAULT 'REQUESTER'",
                 "ALTER TABLE user ADD COLUMN is_temporary_password BOOLEAN DEFAULT 0",
                 "ALTER TABLE user ADD COLUMN phone_number VARCHAR",
-                "ALTER TABLE pettycash ADD COLUMN description VARCHAR DEFAULT 'Petty Cash Claim'"
+                "ALTER TABLE pettycash ADD COLUMN description VARCHAR DEFAULT 'Petty Cash Claim'",
+                "ALTER TABLE company ADD COLUMN contact_person VARCHAR",
+                "ALTER TABLE company ADD COLUMN contact_no VARCHAR",
+                "ALTER TABLE company ADD COLUMN email_address VARCHAR",
+                "ALTER TABLE company ADD COLUMN co_reg_no VARCHAR",
+                "ALTER TABLE company ADD COLUMN trading_license VARCHAR",
+                "ALTER TABLE company ADD COLUMN business_objectives VARCHAR"
             ]
             for m in migrations:
                 try:

@@ -8,7 +8,15 @@ import { useCompany } from '../App'
 const TenantOnboarding = () => {
   const navigate = useNavigate()
   const { handleCompanyChange, isMobile } = useCompany()
-  const [formData, setFormData] = useState({ name: '', domain: '' })
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    contact_person: '', 
+    contact_no: '', 
+    email_address: '', 
+    co_reg_no: '', 
+    trading_license: '', 
+    business_objectives: '' 
+  })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [newCompany, setNewCompany] = useState(null)
@@ -17,7 +25,7 @@ const TenantOnboarding = () => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const company = await procurementApi.createCompany({ name: formData.name, domain: formData.domain })
+      const company = await procurementApi.createCompany(formData)
       setNewCompany(company)
       setSuccess(true)
     } catch (err) { alert(err.message) }
@@ -74,12 +82,54 @@ const TenantOnboarding = () => {
                       style={S.input} />
                   </div>
                   <div>
-                    <label style={S.label}>Company Domain (Optional)</label>
-                    <input type="text" value={formData.domain}
-                      onChange={e => setFormData({...formData, domain: e.target.value})}
-                      placeholder="e.g. advtech.co.uk (or leave blank)"
+                    <label style={S.label}>Contact Person</label>
+                    <input type="text" required value={formData.contact_person}
+                      onChange={e => setFormData({...formData, contact_person: e.target.value})}
+                      placeholder="e.g. John Doe"
                       style={S.input} />
                   </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem' }}>
+                  <div>
+                    <label style={S.label}>Contact Number</label>
+                    <input type="text" required value={formData.contact_no}
+                      onChange={e => setFormData({...formData, contact_no: e.target.value})}
+                      placeholder="e.g. +60 12-345 6789"
+                      style={S.input} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Work Email Address</label>
+                    <input type="email" required value={formData.email_address}
+                      onChange={e => setFormData({...formData, email_address: e.target.value})}
+                      placeholder="e.g. contact@company.com"
+                      style={S.input} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem' }}>
+                  <div>
+                    <label style={S.label}>Co. Registration Number</label>
+                    <input type="text" required value={formData.co_reg_no}
+                      onChange={e => setFormData({...formData, co_reg_no: e.target.value})}
+                      placeholder="e.g. 202401012345 (1500000-X)"
+                      style={S.input} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Trading License / License No.</label>
+                    <input type="text" required value={formData.trading_license}
+                      onChange={e => setFormData({...formData, trading_license: e.target.value})}
+                      placeholder="e.g. L-1234-5678"
+                      style={S.input} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={S.label}>Business Objectives (as per SSM / Equivalent)</label>
+                  <textarea required value={formData.business_objectives}
+                    onChange={e => setFormData({...formData, business_objectives: e.target.value})}
+                    placeholder="Briefly describe the nature of business and objectives..."
+                    style={{ ...S.input, minHeight: '100px', resize: 'vertical', fontFamily: 'inherit' }} />
                 </div>
 
                 {/* Protocol Section */}

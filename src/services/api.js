@@ -39,6 +39,10 @@ export const procurementApi = {
     if (!response.ok) throw new Error("Onboarding failed");
     return response.json();
   },
+  createCompany: async (data) => {
+    // Alias for onboarding a new company tenant
+    return procurementApi.onboardCompany(data);
+  },
 
   updateCompany: async (id, data) => {
     const response = await fetch(`${API_BASE_URL}/companies/${id}`, {

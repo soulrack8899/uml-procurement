@@ -15,6 +15,7 @@ const UserOnboarding = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone_number: '',
     password: 'Temporary@2026',
     company_id: '',
     role: 'REQUESTER'
@@ -48,7 +49,7 @@ const UserOnboarding = () => {
       setShowSuccess(true)
       setTimeout(() => {
         setShowSuccess(false)
-        setFormData(prev => ({ ...prev, name: '', email: '' }))
+        setFormData(prev => ({ ...prev, name: '', email: '', phone_number: '' }))
       }, 3000)
     } catch (err) {
       alert(err.message)
@@ -105,19 +106,26 @@ const UserOnboarding = () => {
           </div>
           <form onSubmit={handleOnboard} style={{ padding: isMobile ? '1.5rem' : '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '1.5rem' }}>
               <div>
                 <label style={S.label}>Full Name</label>
                 <div style={{ position: 'relative' }}>
                   <Users size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
-                  <input required placeholder="Karlos Albert" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
+                  <input required placeholder="John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
                 </div>
               </div>
               <div>
                 <label style={S.label}>Work Email</label>
                 <div style={{ position: 'relative' }}>
                   <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
-                  <input required type="email" placeholder="karlos@umlab.my" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
+                  <input required type="email" placeholder="john@example.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
+                </div>
+              </div>
+              <div>
+                <label style={S.label}>Phone Number</label>
+                <div style={{ position: 'relative' }}>
+                  <Briefcase size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
+                  <input type="text" placeholder="+60 12-345 6789" value={formData.phone_number} onChange={e => setFormData({ ...formData, phone_number: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
                 </div>
               </div>
             </div>

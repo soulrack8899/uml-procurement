@@ -42,6 +42,12 @@ class Company(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     domain: Optional[str] = None
+    contact_person: Optional[str] = None
+    contact_no: Optional[str] = None
+    email_address: Optional[str] = None
+    co_reg_no: Optional[str] = None
+    trading_license: Optional[str] = None
+    business_objectives: Optional[str] = None # SSM equivalents
     logo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
