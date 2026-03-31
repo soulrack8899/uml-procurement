@@ -36,13 +36,32 @@ def get_password_hash(password):
     return pwd_context.hash(pre_hash)
 
 def verify_password(plain_password, hashed_password):
-    # Ensure current input is pre-hashed the same way before verification
-    pre_hash = hashlib.sha256(plain_password.strip().encode()).hexdigest()
-    try:
-        return pwd_context.verify(pre_hash, hashed_password)
-    except Exception as e:
-        logger.error(f"VERIFICATION ERROR: {str(e)}")
+    """Refined verification with fallback support for legacy hashes and plain-text demos"""
+    if not hashed_password:
         return False
+        
+    clean_pass = plain_password.strip()
+    
+    # 1. Standard: SHA256 pre-hashed hexdigest (industrial security)
+    pre_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
+    try:
+        if pwd_context.verify(pre_hash, hashed_password):
+            return True
+    except Exception:
+        pass
+    
+    # 2. Legacy: Direct pass-through hashing
+    try:
+        if pwd_context.verify(clean_pass, hashed_password):
+            return True
+    except Exception:
+        pass
+        
+    # 3. Simple: Direct string comparison fallback for demo/seed data safety
+    if clean_pass == hashed_password:
+        return True
+        
+    return False
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -209,8 +228,9 @@ def on_startup():
                     session.commit()
                 
                 # Master Admin - Use 'or' to handle empty strings from env
-                master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
-                master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "pomodorotechco123"
+                # Master Admin - Set defaults that match the current UMLAB context
+                master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "umlabsarawak@yahoo.com").lower().strip()
+                master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "password123"
                 
                 # --- ONE-TIME USER DATA PURGE (DISABLED FOR PRODUCTION) ---
                 if os.getenv("RESET_IDENTITY") == "true": # Only purge if specifically requested
@@ -241,16 +261,36 @@ def on_startup():
                     session.add(pomodoro)
                     session.commit()
 
-                # --- PROVISION TEST ACCOUNTS ---
-                merakai = session.exec(select(Company).where(Company.name == "Merakai Indah Sdn Bhd")).first()
-                if merakai:
-                    test_users = [
-                        ("admin@merakai.com", UserRole.ADMIN, "Merakai Admin"),
-                        ("director@merakai.com", UserRole.DIRECTOR, "Merakai Director"),
-                        ("manager@merakai.com", UserRole.MANAGER, "Merakai Manager"),
-                        ("finance@merakai.com", UserRole.FINANCE, "Merakai Finance"),
-                        ("requester@merakai.com", UserRole.REQUESTER, "Merakai Requester")
-                    ]
+                    # Provision UMLAB Sarawak Test Admin
+                    umlab = session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
+                    if umlab:
+                        u_email, u_role, u_name = "umlabsarawak@yahoo.com", UserRole.ADMIN, "UMLAB Sarawak Master"
+                        user = session.exec(select(User).where(User.email == u_email)).first()
+                        if not user:
+                            logger.info(f"BOOTSTRAPPING UMLAB MASTER: {u_email}")
+                            user = User(
+                                name=u_name,
+                                email=u_email,
+                                password=get_password_hash("password123"),
+                                approval_status="APPROVED",
+                                is_temporary_password=False
+                            )
+                            session.add(user)
+                            session.commit()
+                            session.refresh(user)
+                            session.add(TenantAccess(user_id=user.id, company_id=umlab.id, role=u_role))
+                            session.commit()
+
+                    # Provision Merakai Indah Sdn Bhd Test Users
+                    merakai = session.exec(select(Company).where(Company.name == "Merakai Indah Sdn Bhd")).first()
+                    if merakai:
+                        test_users = [
+                            ("admin@merakai.com", UserRole.ADMIN, "Merakai Admin"),
+                            ("director@merakai.com", UserRole.DIRECTOR, "Merakai Director"),
+                            ("manager@merakai.com", UserRole.MANAGER, "Merakai Manager"),
+                            ("finance@merakai.com", UserRole.FINANCE, "Merakai Finance"),
+                            ("requester@merakai.com", UserRole.REQUESTER, "Merakai Requester")
+                        ]
                     for t_email, t_role, t_name in test_users:
                         t_user = session.exec(select(User).where(User.email == t_email)).first()
                         if not t_user:
@@ -525,10 +565,10 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.email == email_clean)).first()
     
     # AUTO-PROVISIONING: If this is the master email and it's missing, create it immediately
-    master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
+    master_email = os.getenv("MASTER_ADMIN_EMAIL", "umlabsarawak@yahoo.com").lower().strip()
     if not user and email_clean == master_email:
         logger.info(f"AUTO-PROVISIONING MASTER ADMIN: {master_email}")
-        master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "pomodorotechco123")
+        master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "password123")
         user = User(
             name="Global Systems Admin",
             email=master_email,
