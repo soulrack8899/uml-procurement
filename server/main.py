@@ -228,8 +228,8 @@ def on_startup():
                     session.commit()
                 
                 # Master Admin - Use 'or' to handle empty strings from env
-                # Master Admin - Set defaults that match the current UMLAB context
-                master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "umlabsarawak@yahoo.com").lower().strip()
+                # Master Admin - Pure Global Authority
+                master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
                 master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "password123"
                 
                 # --- ONE-TIME USER DATA PURGE (DISABLED FOR PRODUCTION) ---
@@ -239,10 +239,11 @@ def on_startup():
                     session.execute(text("DELETE FROM user"))
                     session.commit()
                 
-                pomodoro = session.exec(select(User).where(User.email == master_email)).first()
-                if not pomodoro:
-                    logger.info(f"PROVISIONING NEW MASTER AUTHORITY: {master_email} (PassLen: {len(master_pass)})")
-                    pomodoro = User(
+                # Ensure master global admin is provisioned
+                master = session.exec(select(User).where(User.email == master_email)).first()
+                if not master:
+                    logger.info(f"PROVISIONING NEW GLOBAL MASTER: {master_email}")
+                    master = User(
                         name="Global Systems Admin", 
                         email=master_email, 
                         password=get_password_hash(master_pass),
@@ -250,15 +251,14 @@ def on_startup():
                         approval_status="APPROVED",
                         is_temporary_password=False
                     )
-                    session.add(pomodoro)
+                    session.add(master)
                     session.commit()
-                    logger.info(f"BOOTSTRAP COMPLETE: Master {master_email} is now ACTIVE.")
+                    logger.info(f"GLOBAL BOOTSTRAP COMPLETE: {master_email}")
                 else:
-                    logger.info(f"UPDATING MASTER ADMIN AUTHORITY: {master_email}")
-                    pomodoro.password = get_password_hash(master_pass)
-                    pomodoro.approval_status = "APPROVED"
-                    pomodoro.global_role = UserRole.GLOBAL_ADMIN
-                    session.add(pomodoro)
+                    logger.info(f"ALREADY PROVISIONED: {master_email}")
+                    master.password = get_password_hash(master_pass)
+                    master.global_role = UserRole.GLOBAL_ADMIN
+                    session.add(master)
                     session.commit()
 
                     # Provision UMLAB Sarawak Test Admin
@@ -272,6 +272,7 @@ def on_startup():
                                 name=u_name,
                                 email=u_email,
                                 password=get_password_hash("password123"),
+                                global_role=UserRole.REQUESTER, # Explicitly not global
                                 approval_status="APPROVED",
                                 is_temporary_password=False
                             )
@@ -280,6 +281,23 @@ def on_startup():
                             session.refresh(user)
                             session.add(TenantAccess(user_id=user.id, company_id=umlab.id, role=u_role))
                             session.commit()
+                        else:
+                            # Downgrade if it was accidentally made a global admin
+                            if user.global_role == UserRole.GLOBAL_ADMIN:
+                                logger.warning(f"CORRECTING ROLE: Downgrading {u_email} to Company Admin")
+                                user.global_role = UserRole.REQUESTER
+                                session.add(user)
+                                # Ensure it has the correct tenant access
+                                access = session.exec(select(TenantAccess).where(
+                                    TenantAccess.user_id == user.id,
+                                    TenantAccess.company_id == umlab.id
+                                )).first()
+                                if not access:
+                                    session.add(TenantAccess(user_id=user.id, company_id=umlab.id, role=u_role))
+                                else:
+                                    access.role = u_role
+                                    session.add(access)
+                                session.commit()
 
                     # Provision Merakai Indah Sdn Bhd Test Users
                     merakai = session.exec(select(Company).where(Company.name == "Merakai Indah Sdn Bhd")).first()
@@ -565,10 +583,10 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
     email_clean = request.email.lower().strip()
     user = session.exec(select(User).where(User.email == email_clean)).first()
     
-    # AUTO-PROVISIONING: If this is the master email and it's missing, create it immediately
-    master_email = os.getenv("MASTER_ADMIN_EMAIL", "umlabsarawak@yahoo.com").lower().strip()
+    # AUTO-PROVISIONING: Only for the master global admin
+    master_email = os.getenv("MASTER_ADMIN_EMAIL", "pomodorotechco@gmail.com").lower().strip()
     if not user and email_clean == master_email:
-        logger.info(f"AUTO-PROVISIONING MASTER ADMIN: {master_email}")
+        logger.info(f"AUTO-PROVISIONING GLOBAL ADMIN: {master_email}")
         master_pass = os.getenv("MASTER_ADMIN_PASSWORD", "password123")
         user = User(
             name="Global Systems Admin",
