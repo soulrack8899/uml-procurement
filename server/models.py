@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import List, Optional
 from datetime import datetime
+import os
 from sqlmodel import Field, Relationship, SQLModel, create_engine, Session, select
 
 # --- SaaS Enums ---
@@ -28,15 +29,31 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
     GLOBAL_ADMIN = "GLOBAL_ADMIN"
 
-# --- Multi-Tenant Mapping (Tenant-Specific Roles) ---
+# --- 1. AUTH DOMAIN (Stored in auth.db / Auth Schema) ---
+
+class User(SQLModel, table=True):
+    """Core Identity Model - Stored in the Auth Vault"""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str
+    email: str = Field(unique=True, index=True)
+    phone_number: Optional[str] = None
+    password: str = Field(default="password123")
+    global_role: UserRole = Field(default=UserRole.REQUESTER)
+    approval_status: str = Field(default="PENDING")
+    is_temporary_password: bool = Field(default=True)
+    
+    # Relationship to TenantAccess (Procurement DB) - Handled as cross-DB relationship
+    # companies: List["Company"] = Relationship(back_populates="users", link_model="TenantAccess")
+
+# --- 2. PROCUREMENT DOMAIN (Stored in procurement.db / Procurement Schema) ---
 
 class TenantAccess(SQLModel, table=True):
-    """Bridge table for User-to-Tenant access control with entity-specific roles"""
-    user_id: int = Field(foreign_key="user.id", primary_key=True)
+    """Bridge table for User-to-Tenant access. Stored in Procurement DB.
+    Loose link to User (Auth DB) via user_id integer.
+    """
+    user_id: int = Field(primary_key=True) # Loose link to Auth DB
     company_id: int = Field(foreign_key="company.id", primary_key=True)
     role: UserRole = Field(default=UserRole.REQUESTER)
-
-# --- Multi-Tenant Models ---
 
 class Company(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -47,14 +64,13 @@ class Company(SQLModel, table=True):
     email_address: Optional[str] = None
     co_reg_no: Optional[str] = None
     trading_license: Optional[str] = None
-    business_objectives: Optional[str] = None # SSM equivalents
+    business_objectives: Optional[str] = None 
     logo_url: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     settings: "CompanySettings" = Relationship(back_populates="company")
     requests: List["ProcurementRequest"] = Relationship(back_populates="company")
     petty_cash: List["PettyCash"] = Relationship(back_populates="company")
-    users: List["User"] = Relationship(back_populates="companies", link_model=TenantAccess)
 
 class CompanySettings(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -63,21 +79,6 @@ class CompanySettings(SQLModel, table=True):
     currency: str = Field(default="RM")
     
     company: Company = Relationship(back_populates="settings")
-
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str
-    email: str = Field(unique=True, index=True)
-    phone_number: Optional[str] = None
-    password: str = Field(default="password123") # Plain text for demo simplicity, in production use bcrypt
-    # Global role (e.g. for super admin access)
-    global_role: UserRole = Field(default=UserRole.REQUESTER)
-    approval_status: str = Field(default="PENDING") # PENDING, APPROVED, SUSPENDED
-    is_temporary_password: bool = Field(default=True)
-    
-    companies: List[Company] = Relationship(back_populates="users", link_model=TenantAccess)
-
-# --- Procurement Models ---
 
 class ProcurementRequest(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -88,7 +89,7 @@ class ProcurementRequest(SQLModel, table=True):
     total_amount: float
     status: StatusEnum = Field(default=StatusEnum.DRAFT)
     quotation_url: Optional[str] = None
-    created_by: Optional[int] = Field(default=None, foreign_key="user.id")
+    created_by: Optional[int] = Field(default=None) # Loose link to Auth DB
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -118,23 +119,19 @@ class FileMetadata(SQLModel, table=True):
     
     request: Optional[ProcurementRequest] = Relationship(back_populates="files")
 
-# --- Petty Cash Models ---
-
 class PettyCash(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(foreign_key="company.id")
-    requester_id: int = Field(foreign_key="user.id")
+    requester_id: int # Loose link to Auth DB
     amount: float
     description: str = Field(default="Petty Cash Claim")
     receipt_url: Optional[str] = None
     status: PettyCashStatus = Field(default=PettyCashStatus.SUBMITTED)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     disbursed_at: Optional[datetime] = None
-    disbursed_by_id: Optional[int] = Field(default=None, foreign_key="user.id")
+    disbursed_by_id: Optional[int] = Field(default=None) # Loose link to Auth DB
     
     company: Company = Relationship(back_populates="petty_cash")
-
-# --- Audit Logs ---
 
 class AuditLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -150,9 +147,37 @@ class AuditLog(SQLModel, table=True):
     
     request: Optional[ProcurementRequest] = Relationship(back_populates="audit_logs")
 
-# Database setup
-sqlite_url = "sqlite:///./procurement.db"
-engine = create_engine(sqlite_url, echo=True)
+# --- DATABASE CONFIGURATION ---
+
+# Detect PostgreSQL Connection String (Railway Production)
+DB_URL = os.getenv("DATABASE_URL")
+AUTH_DB_URL = os.getenv("AUTH_DATABASE_URL") or DB_URL
+
+# Helper to fix 'postgres://' vs 'postgresql://' for SQLAlchemy
+def fix_postgres_url(url: str):
+    if url and url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    return url
+
+# ENGINE DEFINITIONS
+if DB_URL:
+    # PRODUCTION: PostgreSQL
+    auth_engine = create_engine(fix_postgres_url(AUTH_DB_URL), pool_pre_ping=True)
+    procurement_engine = create_engine(fix_postgres_url(DB_URL), pool_pre_ping=True)
+else:
+    # LOCAL: Separate SQLite Files
+    auth_engine = create_engine("sqlite:///./auth.db", connect_args={"check_same_thread": False})
+    procurement_engine = create_engine("sqlite:///./procurement.db", connect_args={"check_same_thread": False})
 
 def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+    # 1. Create Identity Tables in Auth DB (Use User's metadata)
+    User.metadata.create_all(auth_engine, tables=[User.__table__])
+    
+    # 2. Create Business Tables in Procurement DB (Exclude User table)
+    # We create all tables EXCEPT User
+    procurement_tables = [
+        TenantAccess.__table__, Company.__table__, CompanySettings.__table__,
+        ProcurementRequest.__table__, LineItem.__table__, FileMetadata.__table__,
+        PettyCash.__table__, AuditLog.__table__
+    ]
+    SQLModel.metadata.create_all(procurement_engine, tables=procurement_tables)
