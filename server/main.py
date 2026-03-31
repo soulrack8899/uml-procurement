@@ -1057,7 +1057,7 @@ def disburse_pc(pc_id: int, context: dict = Depends(get_active_session_context),
 
 if __name__ == "__main__":
     import uvicorn
-    # Use Railway provided PORT or fallback to 8080
-    port = int(os.getenv("PORT", 8080))
+    # Use Railway provided PORT or fallback to 8000
+    port = int(os.getenv("PORT", 8000))
     logger.info(f"STARTING SERVER ON PORT {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
