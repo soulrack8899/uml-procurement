@@ -4,6 +4,9 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import logging
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Configure diagnostic logging
 logging.basicConfig(level=logging.INFO)
@@ -51,6 +54,43 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+def send_approval_email(to_email: str, name: str, password: Optional[str] = None):
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username = os.getenv("SMTP_USERNAME")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_from = os.getenv("SMTP_FROM", "noreply@procusure.com")
+    frontend_url = os.getenv("FRONTEND_URL", "https://procusure.vercel.app")
+    
+    subject = "Your ProcuSure Account is Ready!"
+    body = f"<p>Hello {name},</p><p>Your account on ProcuSure has been successfully verified.</p>"
+    if password:
+        body += f"<p>Your temporary password is: <strong>{password}</strong></p><p>Please change your password upon your first login.</p>"
+    body += f"<p><a href='{frontend_url}/login'>Click here to Login</a></p>"
+
+    if not smtp_server or not smtp_username:
+        logger.info(f"--- MOCK EMAIL DELIVERED TO {to_email} ---")
+        logger.info(f"Subject: {subject}")
+        logger.info(f"Content: {body}")
+        logger.info(f"--- END MOCK EMAIL ---")
+        return
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = smtp_from
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'html'))
+
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        logger.info(f"Email sent successfully to {to_email}")
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {e}")
+
 # --- Schemas ---
 class LineItemCreate(BaseModel):
     description: str
@@ -69,6 +109,13 @@ class RequestCreate(BaseModel):
 
 class LoginRequest(BaseModel):
     email: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    phone_number: Optional[str] = None
+    company_id: int
     password: str
 
 class UserCreate(BaseModel):
@@ -209,6 +256,30 @@ def get_active_session_context(
 @app.get("/")
 def read_root(): return {"status": "ok", "service": "ProcuSure Multi-DB API"}
 
+@app.post("/session/register")
+def register_user(data: RegisterRequest, auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
+    email_clean = data.email.lower().strip()
+    existing_user = auth_session.exec(select(User).where(User.email == email_clean)).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already registered")
+        
+    new_user = User(
+        name=data.name, 
+        email=email_clean, 
+        phone_number=data.phone_number,
+        password=get_password_hash(data.password), 
+        approval_status="PENDING", 
+        is_temporary_password=False
+    )
+    auth_session.add(new_user)
+    auth_session.commit()
+    auth_session.refresh(new_user)
+    
+    b_session.add(TenantAccess(user_id=new_user.id, company_id=data.company_id, role=UserRole.REQUESTER))
+    b_session.commit()
+    
+    return {"status": "SUCCESS", "user_id": new_user.id}
+
 @app.post("/session/login")
 def login(request: LoginRequest, auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
     email_clean = request.email.lower().strip()
@@ -331,11 +402,17 @@ def update_user_account(user_id: int, data: dict, context: dict = Depends(get_ac
     user = auth_session.get(User, user_id)
     if not user: raise HTTPException(status_code=404)
     
+    was_pending = user.approval_status != "APPROVED"
+    
     if "approval_status" in data: user.approval_status = data["approval_status"]
     if "is_temporary_password" in data: user.is_temporary_password = data["is_temporary_password"]
     
     auth_session.add(user)
     auth_session.commit()
+    
+    if was_pending and user.approval_status == "APPROVED":
+        send_approval_email(user.email, user.name)
+        
     return {"status": "ok"}
 
 @app.post("/users/onboard")
@@ -345,10 +422,11 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
     email_clean = data.email.lower().strip()
     user = auth_session.exec(select(User).where(User.email == email_clean)).first()
     if not user:
-        user = User(name=data.name, email=email_clean, password=get_password_hash(data.password), approval_status="APPROVED", is_temporary_password=True)
+        user = User(name=data.name, email=email_clean, password=get_password_hash(data.password), approval_status="APPROVED", is_temporary_password=True, phone_number=data.phone_number)
         auth_session.add(user)
         auth_session.commit()
         auth_session.refresh(user)
+        send_approval_email(user.email, user.name, password=data.password)
     
     target_co = data.company_id or (context['company'].id if context['company'] else None)
     if target_co:
