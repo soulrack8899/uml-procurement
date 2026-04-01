@@ -142,7 +142,7 @@ def on_startup():
 
         # 2. Seed Master Admin in Auth DB
         master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
-        master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "password123"
+        master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "pomodorotechco123"
         master = a_session.exec(select(User).where(User.email == master_email)).first()
         if not master:
             master = User(name="Global Admin", email=master_email, password=get_password_hash(master_pass), global_role=UserRole.GLOBAL_ADMIN, approval_status="APPROVED", is_temporary_password=False)
@@ -168,7 +168,10 @@ def on_startup():
              access = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == u_admin.id, TenantAccess.company_id == umlab.id)).first()
              if not access:
                   b_session.add(TenantAccess(user_id=u_admin.id, company_id=umlab.id, role=UserRole.ADMIN))
-                  b_session.commit()
+             else:
+                  access.role = UserRole.ADMIN
+                  b_session.add(access)
+             b_session.commit()
 
 # --- Auth Dependency ---
 def get_active_session_context(
