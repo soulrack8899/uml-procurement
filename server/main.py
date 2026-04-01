@@ -263,23 +263,80 @@ def list_companies(b_session: Session = Depends(get_business_session)):
     return b_session.exec(select(Company)).all()
 
 @app.post("/companies/onboard")
-def onboard_company(company: Company, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+def onboard_company(company: Company, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session), auth_session: Session = Depends(get_auth_session)):
     if context['active_role'] != UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403)
+    
+    # Save Company
     b_session.add(company)
     b_session.commit()
     b_session.refresh(company)
     
-    # Initialize defaults
-    b_session.add(CompanySettings(company_id=company.id))
+    # 1. Provision Primary Admin User in Auth DB
+    admin_email = (company.email_address or "contact@example.com").lower().strip()
+    existing_user = auth_session.exec(select(User).where(User.email == admin_email)).first()
+    
+    if not existing_user:
+        new_admin = User(
+            name=company.contact_person or "Primary Admin",
+            email=admin_email,
+            password=get_password_hash("password123"), # Default password for security
+            approval_status="APPROVED",
+            is_temporary_password=True
+        )
+        auth_session.add(new_admin)
+        auth_session.commit()
+        auth_session.refresh(new_admin)
+        admin_id = new_admin.id
+    else:
+        admin_id = existing_user.id
+        
+    # 2. Grant Access (Link User to Company as ADMIN)
+    b_session.add(TenantAccess(user_id=admin_id, company_id=company.id, role=UserRole.ADMIN))
+    
+    # 3. Grant Master Admin Visibility 
     b_session.add(TenantAccess(user_id=context['user'].id, company_id=company.id, role=UserRole.ADMIN))
+    
+    # 4. Initialize Settings
+    b_session.add(CompanySettings(company_id=company.id))
     b_session.commit()
     
-    # Explicitly return fields to avoid SQLModel/Pydantic dict() serialization issues
     return {
         "id": company.id,
         "name": company.name,
-        "domain": company.domain
+        "primary_admin": admin_email
     }
+
+@app.get("/users/", response_model=List[dict])
+def list_users(context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
+    if context['active_role'] != UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403)
+    users = auth_session.exec(select(User)).all()
+    # Map users for the management view
+    result = []
+    for u in users:
+        tenants = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == u.id)).all()
+        result.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "global_role": str(u.global_role.value if hasattr(u.global_role, 'value') else u.global_role),
+            "approval_status": u.approval_status,
+            "is_temporary_password": u.is_temporary_password,
+            "companies": len(tenants)
+        })
+    return result
+
+@app.patch("/users/{user_id}")
+def update_user_account(user_id: int, data: dict, context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session)):
+    if context['active_role'] != UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403)
+    user = auth_session.get(User, user_id)
+    if not user: raise HTTPException(status_code=404)
+    
+    if "approval_status" in data: user.approval_status = data["approval_status"]
+    if "is_temporary_password" in data: user.is_temporary_password = data["is_temporary_password"]
+    
+    auth_session.add(user)
+    auth_session.commit()
+    return {"status": "ok"}
 
 @app.post("/users/onboard")
 def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):

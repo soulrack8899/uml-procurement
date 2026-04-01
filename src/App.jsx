@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Search, Wallet, ChevronDown, LogOut, Shield } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Search, Wallet, ChevronDown, LogOut, Shield, UserPlus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { procurementApi } from './services/api'
 
@@ -105,26 +105,30 @@ function AppContent() {
   const handleLogin = (user) => {
     setIsAuthenticated(true)
     setUserName(user.name)
+    localStorage.setItem("currentUserId", user.id)
+    localStorage.setItem("currentUserName", user.name)
+    fetchActiveRole()
   }
 
   const handleLogout = () => {
     localStorage.removeItem("currentUserId")
     localStorage.removeItem("currentUserName")
+    localStorage.removeItem("accessToken")
     setIsAuthenticated(false)
     setActiveRole(null)
     setCurrentCompany(null)
   }
 
   const navItems = [
-    { id: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: '/', label: 'Overview', icon: <LayoutDashboard size={20} /> },
     { id: '/procurement', label: 'Procurement', icon: <FileText size={20} /> },
     { id: '/petty-cash', label: 'Petty Cash', icon: <Wallet size={20} /> },
-    { id: '/payment-request', label: 'Payment Request', icon: <FileText size={20} /> },
+    { id: '/payment-request', label: 'Payables', icon: <FileText size={20} /> },
     { id: '/vendors', label: 'Vendors', icon: <Users size={20} /> },
     { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'] },
-    { id: '/onboard-users', label: 'Users', icon: <Plus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
-    { id: '/admin-settings', label: 'Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
-    { id: '/system-management', label: 'System Access', icon: <Shield size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/onboard-users', label: 'User Directory', icon: <UserPlus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/system-management', label: 'System Admin', icon: <Shield size={20} />, roles: ['GLOBAL_ADMIN'] },
+    { id: '/admin-settings', label: 'Tenant Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
   ]
 
   if (!isAuthenticated) {

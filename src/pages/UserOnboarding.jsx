@@ -16,7 +16,7 @@ const UserOnboarding = () => {
     name: '',
     email: '',
     phone_number: '',
-    password: 'Temporary@2026',
+    password: 'password123',
     company_id: '',
     role: 'REQUESTER'
   })
