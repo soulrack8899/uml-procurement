@@ -256,6 +256,12 @@ def create_request(data: RequestCreate, context: dict = Depends(get_active_sessi
     b_session.refresh(new_req)
     return new_req
 
+@app.get("/companies/", response_model=List[Company])
+def list_companies(b_session: Session = Depends(get_business_session)):
+    # Simpler version for now to unblock frontend: return all companies
+    # The frontend uses this to populate the tenant switcher
+    return b_session.exec(select(Company)).all()
+
 @app.post("/companies/onboard")
 def onboard_company(company: Company, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     if context['active_role'] != UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403)
