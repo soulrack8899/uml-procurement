@@ -22,8 +22,9 @@ const UserManagement = () => {
     phone_number: '',
     password: 'password123',
     company_id: '',
-    role: 'REQUESTER'
+    roles: ['REQUESTER']
   });
+
 
   useEffect(() => {
     fetchData();
@@ -70,6 +71,22 @@ const UserManagement = () => {
       setActionLoading(null);
     }
   };
+
+  const handleUpdateRole = async (userId, newRole, roles = []) => {
+    setActionLoading(userId);
+    try {
+      // If roles array provided, use it (multi). Else use newRole (single).
+      const rolesArray = roles.length > 0 ? roles : [newRole];
+      await procurementApi.updateUser(userId, { roles: rolesArray });
+      fetchData(); // Refresh to get combined role labels
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+
 
   const handleResetPassword = async (userId) => {
     const newPass = "password123";
@@ -201,11 +218,34 @@ const UserManagement = () => {
                              </div>
                           </div>
                        </td>
-                       <td style={S.td}>
-                          <span style={{ fontSize: '0.625rem', fontWeight: 900, background: 'var(--surface-container-high)', padding: '2px 8px', borderRadius: 'var(--radius-sm)' }}>
-                             {user.global_role || 'REQUESTER'}
-                          </span>
-                       </td>
+                        <td style={S.td}>
+                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxWidth: '300px' }}>
+                              {availableRoles.map(r => {
+                                 const isAssigned = (user.roles || [user.global_role]).includes(r.id);
+                                 return (
+                                    <button 
+                                      key={r.id}
+                                      onClick={() => {
+                                         const current = (user.roles || [user.global_role]);
+                                         const next = isAssigned ? current.filter(x => x !== r.id) : [...current, r.id];
+                                         if (next.length > 0) handleUpdateRole(user.id, null, next);
+                                      }}
+                                      style={{ 
+                                         fontSize: '0.625rem', fontWeight: 900, 
+                                         background: isAssigned ? 'var(--primary-container)' : 'var(--surface-container-high)',
+                                         color: isAssigned ? 'var(--on-primary-container)' : 'var(--outline)',
+                                         padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: 'none', cursor: 'pointer',
+                                         transition: 'all 0.2s', border: isAssigned ? '1px solid var(--primary)' : '1px solid transparent'
+                                      }}
+                                    >
+                                       {r.id === 'ADMIN' ? 'ADMIN' : r.id}
+                                    </button>
+                                 );
+                              })}
+                           </div>
+                        </td>
+
+
                        <td style={S.td}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, color: user.approval_status === 'APPROVED' ? 'var(--tertiary)' : 'var(--error)' }}>
                              {user.approval_status === 'APPROVED' ? <ShieldCheck size={14} /> : <Lock size={14} />}
@@ -261,22 +301,28 @@ const UserManagement = () => {
                     </div>
                  )}
 
-                 <div>
-                    <label style={S.label}>Assign Role & Permissions</label>
+                  <div>
+                    <label style={S.label}>Assign Role(s) & Permissions (Select Multiple)</label>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
-                        {availableRoles.map(role => (
-                           <div key={role.id} onClick={() => setFormData({ ...formData, role: role.id })} style={{ 
-                             padding: '1rem', borderRadius: 'var(--radius-sm)', border: `2px solid ${formData.role === role.id ? 'var(--primary)' : 'transparent'}`,
-                             background: formData.role === role.id ? 'var(--primary-container)' : 'var(--surface-container-low)', cursor: 'pointer', transition: 'all 0.2s'
-                           }}>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: formData.role === role.id ? 'var(--on-primary-container)' : 'var(--on-surface)' }}>{role.name}</span>
+                        {availableRoles.map(role => {
+                           const isSelected = (formData.roles || []).includes(role.id);
+                           return (
+                             <div key={role.id} onClick={() => {
+                                const next = isSelected ? formData.roles.filter(r => r !== role.id) : [...(formData.roles || []), role.id];
+                                setFormData({ ...formData, roles: next });
+                             }} style={{ 
+                               padding: '1rem', borderRadius: 'var(--radius-sm)', border: `2px solid ${isSelected ? 'var(--primary)' : 'transparent'}`,
+                               background: isSelected ? 'var(--primary-container)' : 'var(--surface-container-low)', cursor: 'pointer', transition: 'all 0.2s'
+                             }}>
+                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isSelected ? 'var(--on-primary-container)' : 'var(--on-surface)' }}>{role.name}</span>
+                               </div>
+                               <p style={{ fontSize: '0.625rem', color: isSelected ? 'var(--on-primary-container)' : 'var(--outline)', lineHeight: 1.4 }}>{role.desc}</p>
                              </div>
-                             <p style={{ fontSize: '0.625rem', color: formData.role === role.id ? 'var(--on-primary-container)' : 'var(--outline)', lineHeight: 1.4 }}>{role.desc}</p>
-                           </div>
-                        ))}
+                           );
+                        })}
                     </div>
-                 </div>
+                  </div>
 
                  <button disabled={submitting} type="submit" className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-md)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '1rem' }}>
                     {submitting ? 'Creating...' : <>Confirm & Provision Account <ArrowRight size={18} /></>}

@@ -53,6 +53,21 @@ export const procurementApi = {
     if (!response.ok) throw new Error("Update failed");
     return response.json();
   },
+
+  getSettings: async (companyId) => {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/settings`, { headers: getHeaders() });
+    if (!response.ok) throw new Error("Failed to fetch settings");
+    return response.json();
+  },
+
+  updateSettings: async (companyId, threshold) => {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/settings?threshold=${threshold}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error("Update failed");
+    return response.json();
+  },
   
   // --- Procurement ---
   getRequests: async () => {
@@ -65,6 +80,17 @@ export const procurementApi = {
     const response = await fetch(`${API_BASE_URL}/requests/${id}`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Request not found in this tenant.");
     return response.json();
+  },
+
+  getAuditLogs: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/requests/${id}/audit`, { headers: getHeaders() });
+    return response.json();
+  },
+
+  generatePO: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/requests/${id}/generate-po`, { headers: getHeaders() });
+    if (!response.ok) throw new Error("Failed to generate PO");
+    return response.blob();
   },
   
   updateRequest: async (id, data) => {

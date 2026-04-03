@@ -125,6 +125,8 @@ class UserCreate(BaseModel):
     password: str = "password123"
     company_id: Optional[int] = None
     role: UserRole = UserRole.REQUESTER
+    roles: Optional[List[UserRole]] = None
+
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
@@ -220,6 +222,15 @@ def on_startup():
                   b_session.add(access)
              b_session.commit()
 
+ROLE_PRIORITY = {
+    UserRole.GLOBAL_ADMIN: 100,
+    UserRole.ADMIN: 50,
+    UserRole.DIRECTOR: 40,
+    UserRole.FINANCE: 30,
+    UserRole.MANAGER: 20,
+    UserRole.REQUESTER: 10,
+}
+
 # --- Auth Dependency ---
 def get_active_session_context(
     request: Request,
@@ -243,13 +254,19 @@ def get_active_session_context(
     company = b_session.get(Company, x_company_id) if x_company_id else None
     
     if user.global_role == UserRole.GLOBAL_ADMIN:
-        return {"company": company, "user": user, "active_role": UserRole.GLOBAL_ADMIN}
+        return {"company": company, "user": user, "active_role": UserRole.GLOBAL_ADMIN, "active_roles": [UserRole.GLOBAL_ADMIN]}
 
     if not company: raise HTTPException(status_code=404, detail="Entity not found")
-    access = b_session.exec(select(TenantAccess).where(TenantAccess.company_id == x_company_id, TenantAccess.user_id == user.id)).first()
-    if not access: raise HTTPException(status_code=403, detail="No access to this entity")
     
-    return {"company": company, "user": user, "active_role": access.role}
+    access_list = b_session.exec(select(TenantAccess).where(TenantAccess.company_id == x_company_id, TenantAccess.user_id == user.id)).all()
+    if not access_list: raise HTTPException(status_code=403, detail="No access to this entity")
+    
+    roles = [a.role for a in access_list]
+    # Pick highest role as 'active_role' for single-role logic
+    primary_role = max(roles, key=lambda r: ROLE_PRIORITY.get(r, 0))
+    
+    return {"company": company, "user": user, "active_role": primary_role, "active_roles": roles}
+
 
 # --- Endpoints ---
 
@@ -333,12 +350,106 @@ def list_requests(context: dict = Depends(get_active_session_context), b_session
 
 @app.post("/requests/", response_model=ProcurementRequest)
 def create_request(data: RequestCreate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
-    new_req = ProcurementRequest(**data.dict(exclude={'items'}), company_id=context['company'].id, created_by=context['user'].id)
+    new_req = ProcurementRequest(**data.dict(exclude={'items'}), company_id=context['company'].id, created_by=context['user'].id, status=StatusEnum.SUBMITTED)
     new_req.items = [LineItem(**item.dict()) for item in data.items]
     b_session.add(new_req)
     b_session.commit()
     b_session.refresh(new_req)
+    
+    # Audit log
+    b_session.add(AuditLog(
+        company_id=context['company'].id,
+        request_id=new_req.id,
+        action="Request Created & Submitted",
+        to_status=StatusEnum.SUBMITTED,
+        user_name=context['user'].name,
+        user_role=context['active_role']
+    ))
+    b_session.commit()
     return new_req
+
+@app.get("/requests/{request_id}", response_model=ProcurementRequest)
+def get_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    req = b_session.get(ProcurementRequest, request_id)
+    if not req: raise HTTPException(status_code=404)
+    if context['active_role'] != UserRole.GLOBAL_ADMIN and req.company_id != context['company'].id:
+        raise HTTPException(status_code=403)
+    return req
+
+@app.get("/requests/{request_id}/audit", response_model=List[AuditLog])
+def get_audit_logs(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    return b_session.exec(select(AuditLog).where(AuditLog.request_id == request_id)).all()
+
+@app.post("/requests/{request_id}/transition")
+def transition_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    req = b_session.get(ProcurementRequest, request_id)
+    if not req: raise HTTPException(status_code=404)
+    
+    old_status = req.status
+    settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == req.company_id)).first()
+    threshold = settings.approval_threshold if settings else 5000.0
+    
+    # Workflow Transitions
+    if req.status == StatusEnum.SUBMITTED:
+        if req.total_amount > threshold:
+            req.status = StatusEnum.PENDING_DIRECTOR
+        else:
+            req.status = StatusEnum.PENDING_MANAGER
+    
+    elif req.status == StatusEnum.PENDING_MANAGER:
+        # Assuming manager approved
+        if req.total_amount > threshold:
+            req.status = StatusEnum.PENDING_DIRECTOR
+        else:
+            req.status = StatusEnum.APPROVED
+            
+    elif req.status == StatusEnum.PENDING_DIRECTOR:
+        req.status = StatusEnum.APPROVED
+        
+    elif req.status == StatusEnum.APPROVED:
+        req.status = StatusEnum.PO_ISSUED
+        
+    elif req.status == StatusEnum.PO_ISSUED:
+        req.status = StatusEnum.PAYMENT_PENDING
+        
+    elif req.status == StatusEnum.PAYMENT_PENDING:
+        req.status = StatusEnum.PAID
+
+    b_session.add(req)
+    # Log the transition
+    b_session.add(AuditLog(
+        company_id=req.company_id,
+        request_id=req.id,
+        action="Transition Workflow",
+        from_status=old_status,
+        to_status=req.status,
+        user_name=context['user'].name,
+        user_role=context['active_role']
+    ))
+    b_session.commit()
+    return {"status": "ok", "new_status": req.status}
+
+@app.get("/requests/{request_id}/generate-po")
+def get_po_report(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    req = b_session.get(ProcurementRequest, request_id)
+    if not req: raise HTTPException(status_code=404)
+    
+    # Export to dict for po_generator
+    req_dict = {
+        "id": req.id,
+        "vendor_name": req.vendor_name,
+        "vendor_id": req.vendor_id,
+        "total_amount": req.total_amount,
+        "items": [{"description": i.description, "quantity": i.quantity, "unit_price": i.unit_price, "total_price": i.total_price} for i in req.items]
+    }
+    
+    out_dir = "uploads/pos"
+    if not os.path.exists(out_dir): os.makedirs(out_dir)
+    file_path = os.path.join(out_dir, f"PO_{request_id}.pdf")
+    generate_po_pdf(req_dict, file_path)
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(file_path, filename=f"PO_{request_id}.pdf")
 
 @app.get("/companies/", response_model=List[Company])
 def list_companies(b_session: Session = Depends(get_business_session)):
@@ -390,6 +501,38 @@ def onboard_company(company: Company, context: dict = Depends(get_active_session
         "primary_admin": admin_email
     }
 
+@app.get("/companies/{company_id}/settings", response_model=CompanySettings)
+def get_company_settings(company_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    # Simple check: context['company'].id should match company_id or user is GLOBAL_ADMIN
+    if context['active_role'] != UserRole.GLOBAL_ADMIN and context['company'].id != company_id:
+        raise HTTPException(status_code=403, detail="Access denied to this company settings")
+    
+    settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == company_id)).first()
+    if not settings:
+        # Auto-initialize if missing
+        settings = CompanySettings(company_id=company_id)
+        b_session.add(settings)
+        b_session.commit()
+        b_session.refresh(settings)
+    return settings
+
+@app.patch("/companies/{company_id}/settings")
+def update_company_settings(company_id: int, threshold: float, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    if context['active_role'] != UserRole.GLOBAL_ADMIN and context['company'].id != company_id:
+        raise HTTPException(status_code=403, detail="Access denied to this company settings")
+
+    settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == company_id)).first()
+    if not settings:
+        settings = CompanySettings(company_id=company_id)
+    
+    settings.approval_threshold = threshold
+    b_session.add(settings)
+    b_session.commit()
+    return {"status": "SUCCESS"}
+
 @app.get("/users/", response_model=List[dict])
 def list_users(context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
     if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
@@ -405,23 +548,27 @@ def list_users(context: dict = Depends(get_active_session_context), auth_session
     result = []
     for u in users:
         tenants = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == u.id)).all()
-        # If Company Admin, only show their role in THIS company
-        if context['active_role'] == UserRole.ADMIN:
-            this_access = next((a for a in tenants if a.company_id == context['company'].id), None)
-            role_label = this_access.role if this_access else "No Access"
+        
+        # Determine local and global roles
+        if context['company']:
+            local_roles = [t.role for t in tenants if t.company_id == context['company'].id]
+            role_label = ", ".join([r.value if hasattr(r, 'value') else str(r) for r in local_roles]) if local_roles else "No Access"
         else:
-            role_label = u.global_role
+            role_label = u.global_role.value if hasattr(u.global_role, 'value') else str(u.global_role)
+            local_roles = []
 
         result.append({
             "id": u.id,
             "name": u.name,
             "email": u.email,
-            "global_role": str(role_label.value if hasattr(role_label, 'value') else role_label),
+            "global_role": role_label,
+            "roles": [r.value if hasattr(r, 'value') else str(r) for r in local_roles],
             "approval_status": u.approval_status,
             "is_temporary_password": u.is_temporary_password,
-            "companies": len(tenants)
+            "companies": len(set([t.company_id for t in tenants]))
         })
     return result
+
 
 @app.patch("/users/{user_id}")
 def update_user_account(user_id: int, data: dict, context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
@@ -447,6 +594,28 @@ def update_user_account(user_id: int, data: dict, context: dict = Depends(get_ac
         user.password = get_password_hash(data["password"])
         user.is_temporary_password = True
     
+    # Handle Role Updates (supports single 'role' or list 'roles')
+    new_roles = data.get("roles") or ([data.get("role")] if data.get("role") else [])
+    if new_roles:
+        if context['company']:
+            # Cleanup existing entries for this user in this company
+            stmt = select(TenantAccess).where(TenantAccess.user_id == user_id, TenantAccess.company_id == context['company'].id)
+            existing = b_session.exec(stmt).all()
+            for ex in existing: b_session.delete(ex)
+            b_session.commit()
+            
+            # Add new role(s)
+            for r in new_roles:
+                b_session.add(TenantAccess(user_id=user_id, company_id=context['company'].id, role=r))
+            b_session.commit()
+
+        # Update global_role to highest assigned role
+        highest = max(new_roles, key=lambda r: ROLE_PRIORITY.get(r, 0))
+        if user.global_role != UserRole.GLOBAL_ADMIN:
+             user.global_role = highest
+
+
+    
     auth_session.add(user)
     auth_session.commit()
     
@@ -466,10 +635,10 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
         auth_session.add(user)
         auth_session.commit()
     else:
-        # Update existing user to match new onboarding request (new password/role if applicable)
+        # Update existing user
         user.password = get_password_hash(data.password)
         user.is_temporary_password = True
-        user.name = data.name # Ensure name matches
+        user.name = data.name
         user.approval_status = "APPROVED"
         auth_session.add(user)
         auth_session.commit()
@@ -479,10 +648,31 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
     
     target_co = data.company_id or (context['company'].id if context['company'] else None)
     if target_co:
-        b_session.add(TenantAccess(user_id=user.id, company_id=target_co, role=data.role))
+        # Determine roles (list vs single fallback)
+        roles_to_assign = data.roles if data.roles else [data.role]
+        
+        # Cleanup existing roles first
+        stmt = select(TenantAccess).where(TenantAccess.user_id == user.id, TenantAccess.company_id == target_co)
+        existing = b_session.exec(stmt).all()
+        for ex in existing: b_session.delete(ex)
         b_session.commit()
+        
+        for r in roles_to_assign:
+            b_session.add(TenantAccess(user_id=user.id, company_id=target_co, role=r))
+        
+        b_session.commit()
+
+        # Update global_role to highest assigned role
+        highest_role = max(roles_to_assign, key=lambda r: ROLE_PRIORITY.get(r, 0))
+        if user.global_role != UserRole.GLOBAL_ADMIN:
+            user.global_role = highest_role
+            auth_session.add(user)
+            auth_session.commit()
     
     return {"status": "SUCCESS", "user_id": user.id}
+
+
+
 
 @app.get("/petty-cash/", response_model=List[PettyCash])
 def list_petty_cash(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):

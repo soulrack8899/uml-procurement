@@ -53,7 +53,8 @@ class TenantAccess(SQLModel, table=True):
     """
     user_id: int = Field(primary_key=True) # Loose link to Auth DB
     company_id: int = Field(foreign_key="company.id", primary_key=True)
-    role: UserRole = Field(default=UserRole.REQUESTER)
+    role: UserRole = Field(default=UserRole.REQUESTER, primary_key=True)
+
 
 class Company(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
