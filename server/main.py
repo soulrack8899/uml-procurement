@@ -296,9 +296,22 @@ def login(request: LoginRequest, auth_session: Session = Depends(get_auth_sessio
         "token_type": "bearer", 
         "user_id": user.id, 
         "user_name": user.name,
+        "is_temporary_password": user.is_temporary_password,
         "active_company_id": primary_access.company_id if primary_access else None,
         "role": user.global_role
     }
+
+class PasswordChangeRequest(BaseModel):
+    new_password: str
+
+@app.post("/session/change-password")
+def change_password(data: PasswordChangeRequest, context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session)):
+    user = context['user']
+    user.password = get_password_hash(data.new_password)
+    user.is_temporary_password = False
+    auth_session.add(user)
+    auth_session.commit()
+    return {"status": "SUCCESS"}
 
 @app.get("/session/whoami")
 def whoami(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
@@ -406,6 +419,9 @@ def update_user_account(user_id: int, data: dict, context: dict = Depends(get_ac
     
     if "approval_status" in data: user.approval_status = data["approval_status"]
     if "is_temporary_password" in data: user.is_temporary_password = data["is_temporary_password"]
+    if "password" in data:
+        user.password = get_password_hash(data["password"])
+        user.is_temporary_password = True
     
     auth_session.add(user)
     auth_session.commit()
@@ -425,8 +441,17 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
         user = User(name=data.name, email=email_clean, password=get_password_hash(data.password), approval_status="APPROVED", is_temporary_password=True, phone_number=data.phone_number)
         auth_session.add(user)
         auth_session.commit()
-        auth_session.refresh(user)
-        send_approval_email(user.email, user.name, password=data.password)
+    else:
+        # Update existing user to match new onboarding request (new password/role if applicable)
+        user.password = get_password_hash(data.password)
+        user.is_temporary_password = True
+        user.name = data.name # Ensure name matches
+        user.approval_status = "APPROVED"
+        auth_session.add(user)
+        auth_session.commit()
+    
+    auth_session.refresh(user)
+    send_approval_email(user.email, user.name, password=data.password)
     
     target_co = data.company_id or (context['company'].id if context['company'] else None)
     if target_co:
