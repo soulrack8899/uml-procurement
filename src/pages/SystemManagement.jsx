@@ -104,7 +104,7 @@ const SystemManagement = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link to="/onboard-users" style={{ textDecoration: 'none' }}>
+            <Link to="/user-management" style={{ textDecoration: 'none' }}>
                 <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', borderRadius: 'var(--radius-pill)', border: 'none', background: 'var(--primary)', color: 'white', fontWeight: 800, cursor: 'pointer' }}>
                     <Users size={18} /> Provision User
                 </button>

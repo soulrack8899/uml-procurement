@@ -392,17 +392,31 @@ def onboard_company(company: Company, context: dict = Depends(get_active_session
 
 @app.get("/users/", response_model=List[dict])
 def list_users(context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
-    if context['active_role'] != UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403)
-    users = auth_session.exec(select(User)).all()
-    # Map users for the management view
+    if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
+    
+    if context['active_role'] == UserRole.GLOBAL_ADMIN:
+        users = auth_session.exec(select(User)).all()
+    else:
+        # Get only users in THIS company
+        company_access = b_session.exec(select(TenantAccess).where(TenantAccess.company_id == context['company'].id)).all()
+        target_user_ids = [a.user_id for a in company_access]
+        users = auth_session.exec(select(User).where(User.id.in_(target_user_ids))).all()
+
     result = []
     for u in users:
         tenants = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == u.id)).all()
+        # If Company Admin, only show their role in THIS company
+        if context['active_role'] == UserRole.ADMIN:
+            this_access = next((a for a in tenants if a.company_id == context['company'].id), None)
+            role_label = this_access.role if this_access else "No Access"
+        else:
+            role_label = u.global_role
+
         result.append({
             "id": u.id,
             "name": u.name,
             "email": u.email,
-            "global_role": str(u.global_role.value if hasattr(u.global_role, 'value') else u.global_role),
+            "global_role": str(role_label.value if hasattr(role_label, 'value') else role_label),
             "approval_status": u.approval_status,
             "is_temporary_password": u.is_temporary_password,
             "companies": len(tenants)
@@ -410,10 +424,20 @@ def list_users(context: dict = Depends(get_active_session_context), auth_session
     return result
 
 @app.patch("/users/{user_id}")
-def update_user_account(user_id: int, data: dict, context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session)):
-    if context['active_role'] != UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403)
+def update_user_account(user_id: int, data: dict, context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
+    if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
+    
     user = auth_session.get(User, user_id)
     if not user: raise HTTPException(status_code=404)
+    
+    # Permission Guard for Company Admin
+    if context['active_role'] == UserRole.ADMIN:
+        # Check if target is in the same company
+        access = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == user_id, TenantAccess.company_id == context['company'].id)).first()
+        if not access: raise HTTPException(status_code=403, detail="User not part of your organization")
+        # Cannot modify Global Admins
+        if user.global_role == UserRole.GLOBAL_ADMIN: raise HTTPException(status_code=403, detail="Insufficient permission")
+
     
     was_pending = user.approval_status != "APPROVED"
     

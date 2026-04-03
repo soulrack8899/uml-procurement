@@ -1,0 +1,314 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, Shield, ShieldCheck, Mail, Lock, CheckCircle2, UserPlus, RefreshCw, Search, ChevronRight, Building2, ArrowRight, Briefcase } from 'lucide-react';
+import { procurementApi } from '../services/api';
+import { useCompany } from '../App';
+
+const UserManagement = () => {
+  const { currentCompany, activeRole, isMobile } = useCompany();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('DIRECTORY'); // DIRECTORY or PROVISION
+  const [searchTerm, setSearchTerm] = useState('');
+  const [actionLoading, setActionLoading] = useState(null);
+  
+  // Provisioning Form State
+  const [companies, setCompanies] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone_number: '',
+    password: 'password123',
+    company_id: '',
+    role: 'REQUESTER'
+  });
+
+  useEffect(() => {
+    fetchData();
+    if (activeRole === 'GLOBAL_ADMIN') {
+        fetchCompanies();
+    }
+  }, [activeRole]);
+
+  useEffect(() => {
+     if (currentCompany && !formData.company_id) {
+         setFormData(prev => ({ ...prev, company_id: currentCompany.id }));
+     }
+  }, [currentCompany]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const userData = await procurementApi.getUsers();
+      setUsers(userData || []);
+    } catch (err) {
+      console.error("User Loading Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCompanies = async () => {
+    try {
+      const data = await procurementApi.getCompanies();
+      setCompanies(data);
+    } catch (err) {
+      console.error("Failed to load companies", err);
+    }
+  };
+
+  const handleUpdateStatus = async (userId, newStatus) => {
+    setActionLoading(userId);
+    try {
+      await procurementApi.updateUser(userId, { approval_status: newStatus });
+      setUsers(users.map(u => u.id === userId ? { ...u, approval_status: newStatus } : u));
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResetPassword = async (userId) => {
+    const newPass = "password123";
+    if (!window.confirm(`Reset password for this user to default: 'password123'?`)) return;
+    
+    setActionLoading(userId);
+    try {
+      await procurementApi.updateUser(userId, { 
+        password: newPass, 
+        is_temporary_password: true 
+      });
+      alert("Password reset completed. User must change it on next login.");
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleOnboard = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await procurementApi.onboardUser(formData);
+      setShowSuccess(true);
+      fetchData(); // Refresh list
+      setTimeout(() => {
+        setShowSuccess(false);
+        setFormData(prev => ({ ...prev, name: '', email: '', phone_number: '' }));
+        setActiveTab('DIRECTORY');
+      }, 2000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filteredUsers = users.filter(u => 
+    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const allRoles = [
+    { id: 'REQUESTER', name: 'Staff (Requester)', desc: 'Standard personnel. Can initiate procurement requests.' },
+    { id: 'MANAGER', name: 'Manager (Approver)', desc: 'Department oversight. Can approve requests within thresholds.' },
+    { id: 'FINANCE', name: 'Finance Officer', desc: 'Financial compliance. Manages PO issuance and payments.' },
+    { id: 'DIRECTOR', name: 'Director (Board)', desc: 'Highest authority. Required for high-value strategic spend.' },
+    { id: 'ADMIN', name: 'System Admin (Procurement)', desc: 'Administrative lead. Manages company users and vendors.' }
+  ];
+
+  const availableRoles = allRoles.filter(role => {
+    if (['ADMIN', 'DIRECTOR'].includes(role.id)) return activeRole === 'GLOBAL_ADMIN';
+    return true;
+  });
+
+  const S = {
+    card: { background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(194,198,211,0.2)', overflow: 'hidden' },
+    tab: (active) => ({
+      padding: '1rem 2rem', borderBottom: `3px solid ${active ? 'var(--primary)' : 'transparent'}`,
+      color: active ? 'var(--primary)' : 'var(--outline)', fontWeight: 800, fontSize: '0.875rem', cursor: 'pointer', transition: 'all 0.2s'
+    }),
+    th: { padding: '1rem', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', textAlign: 'left', borderBottom: '1px solid var(--outline-variant-low)' },
+    td: { padding: '1.25rem 1rem', fontSize: '0.875rem', color: 'var(--on-surface)', borderBottom: '1px solid var(--outline-variant-low)' },
+    label: { display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' },
+    input: { width: '100%', padding: '0.75rem 1rem', background: 'var(--surface-container-low)', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-sm)', color: 'var(--on-surface)', fontSize: '0.875rem', fontWeight: 600, outline: 'none' }
+  };
+
+  return (
+    <div style={{ maxWidth: '80rem', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+             <span style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>Organization</span>
+             <ChevronRight size={12} style={{ color: 'var(--outline)' }} />
+             <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>Team Management</span>
+          </nav>
+          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+             {activeRole === 'GLOBAL_ADMIN' ? 'Global Directory' : `${currentCompany?.name} Team`}
+          </h1>
+        </div>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+           <button onClick={() => setActiveTab(activeTab === 'DIRECTORY' ? 'PROVISION' : 'DIRECTORY')} className="gradient-fill" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.75rem', borderRadius: 'var(--radius-pill)', border: 'none', color: 'white', fontWeight: 800, cursor: 'pointer', transition: 'all 0.3s' }}>
+              {activeTab === 'DIRECTORY' ? <><UserPlus size={18} /> Add Team Member</> : <><Users size={18} /> View Directory</>}
+           </button>
+        </div>
+      </div>
+
+      {/* Tabs Menu */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--outline-variant-low)', gap: '1rem' }}>
+          <div onClick={() => setActiveTab('DIRECTORY')} style={S.tab(activeTab === 'DIRECTORY')}>Member Directory</div>
+          <div onClick={() => setActiveTab('PROVISION')} style={S.tab(activeTab === 'PROVISION')}>Provisioning Hub</div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'DIRECTORY' ? (
+          <motion.div key="dir" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={S.card}>
+             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--outline-variant-low)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flex: 1, minWidth: '280px', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-pill)', padding: '0.75rem 1.5rem', alignItems: 'center', gap: '1rem' }}>
+                   <Search size={18} style={{ color: 'var(--outline)' }} />
+                   <input placeholder="Search by name or email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontWeight: 600, fontSize: '0.875rem' }} />
+                </div>
+                <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
+             </div>
+
+             <div style={{ overflowX: 'auto' }}>
+               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                 <thead>
+                   <tr style={{ background: 'var(--surface-container-low)' }}>
+                     <th style={S.th}>Team Member</th>
+                     <th style={S.th}>Access Role</th>
+                     <th style={S.th}>System Status</th>
+                     <th style={{ ...S.th, textAlign: 'right' }}>Management</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {loading ? (
+                       <tr><td colSpan="4" style={{ textAlign: 'center', padding: '4rem' }}>Loading directory...</td></tr>
+                   ) : filteredUsers.map((user) => (
+                     <tr key={user.id}>
+                       <td style={S.td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                             <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-pill)', background: 'var(--primary-container)', color: 'var(--on-primary-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem' }}>{user.name[0]}</div>
+                             <div>
+                                <div style={{ fontWeight: 800 }}>{user.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{user.email}</div>
+                             </div>
+                          </div>
+                       </td>
+                       <td style={S.td}>
+                          <span style={{ fontSize: '0.625rem', fontWeight: 900, background: 'var(--surface-container-high)', padding: '2px 8px', borderRadius: 'var(--radius-sm)' }}>
+                             {user.global_role || 'REQUESTER'}
+                          </span>
+                       </td>
+                       <td style={S.td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, color: user.approval_status === 'APPROVED' ? 'var(--tertiary)' : 'var(--error)' }}>
+                             {user.approval_status === 'APPROVED' ? <ShieldCheck size={14} /> : <Lock size={14} />}
+                             {user.approval_status}
+                          </div>
+                       </td>
+                       <td style={{ ...S.td, textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                             <button onClick={() => handleResetPassword(user.id)} style={{ padding: '0.5rem 1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Reset PW</button>
+                             {user.approval_status === 'APPROVED' ? (
+                               <button onClick={() => handleUpdateStatus(user.id, 'SUSPENDED')} style={{ padding: '0.5rem 1rem', background: 'none', border: '1px solid var(--error)', color: 'var(--error)', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Suspend</button>
+                             ) : (
+                               <button onClick={() => handleUpdateStatus(user.id, 'APPROVED')} className="gradient-fill" style={{ padding: '0.5rem 1rem', border: 'none', color: 'white', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Approve</button>
+                             )}
+                          </div>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+          </motion.div>
+        ) : (
+          <motion.div key="prov" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '7fr 5fr', gap: '2rem' }}>
+             <div style={S.card}>
+               <div style={{ background: 'var(--surface-container-high)', padding: '1.5rem', borderBottom: '1px solid rgba(194,198,211,0.1)' }}>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Onboarding Details</h2>
+               </div>
+               <form onSubmit={handleOnboard} style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
+                    <div>
+                        <label style={S.label}>Full Legal Name</label>
+                        <div style={{ position: 'relative' }}>
+                            <Users size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
+                            <input required placeholder="Staff Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
+                        </div>
+                    </div>
+                    <div>
+                        <label style={S.label}>Email Address</label>
+                        <div style={{ position: 'relative' }}>
+                            <Mail size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }} />
+                            <input required type="email" placeholder="email@company.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} style={{ ...S.input, paddingLeft: '3rem' }} />
+                        </div>
+                    </div>
+                 </div>
+
+                 {activeRole === 'GLOBAL_ADMIN' && (
+                    <div>
+                        <label style={S.label}>Target Company</label>
+                        <select value={formData.company_id} onChange={e => setFormData({ ...formData, company_id: e.target.value })} style={S.input}>
+                            {companies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
+                        </select>
+                    </div>
+                 )}
+
+                 <div>
+                    <label style={S.label}>Assign Role & Permissions</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
+                        {availableRoles.map(role => (
+                           <div key={role.id} onClick={() => setFormData({ ...formData, role: role.id })} style={{ 
+                             padding: '1rem', borderRadius: 'var(--radius-sm)', border: `2px solid ${formData.role === role.id ? 'var(--primary)' : 'transparent'}`,
+                             background: formData.role === role.id ? 'var(--primary-container)' : 'var(--surface-container-low)', cursor: 'pointer', transition: 'all 0.2s'
+                           }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: formData.role === role.id ? 'var(--on-primary-container)' : 'var(--on-surface)' }}>{role.name}</span>
+                             </div>
+                             <p style={{ fontSize: '0.625rem', color: formData.role === role.id ? 'var(--on-primary-container)' : 'var(--outline)', lineHeight: 1.4 }}>{role.desc}</p>
+                           </div>
+                        ))}
+                    </div>
+                 </div>
+
+                 <button disabled={submitting} type="submit" className="gradient-fill" style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-md)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '1rem' }}>
+                    {submitting ? 'Creating...' : <>Confirm & Provision Account <ArrowRight size={18} /></>}
+                 </button>
+               </form>
+             </div>
+
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <section style={{ ...S.card, padding: '2rem', borderLeft: '4px solid var(--primary)' }}>
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Lock size={16} /> Security Notice</h3>
+                    <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <li>Initial password is set to <strong>password123</strong>.</li>
+                        <li>User will be prompted to update this upon their first secure login.</li>
+                        <li>All actions are tracked in the platform audit log.</li>
+                    </ul>
+                </section>
+                {showSuccess && (
+                  <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={{ background: 'var(--tertiary-container)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--on-tertiary-container)' }}>
+                    <CheckCircle2 size={32} style={{ color: 'var(--on-tertiary-container)' }} />
+                    <div>
+                      <h4 style={{ fontWeight: 900, color: 'var(--on-tertiary-container)' }}>Success</h4>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--on-tertiary-container)' }}>User account created and credentials dispatched.</p>
+                    </div>
+                  </motion.div>
+                )}
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+};
+
+export default UserManagement;

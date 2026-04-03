@@ -118,7 +118,7 @@ const AdminSettings = () => {
                   </div>
                 ))}
              </div>
-             <button onClick={() => navigate('/onboard-users')} style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', background: 'transparent', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Manage Permissions</button>
+             <button onClick={() => navigate('/user-management')} style={{ width: '100%', marginTop: '1.5rem', padding: '0.75rem', background: 'transparent', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Manage Permissions</button>
           </section>
 
           <section style={{ background: 'var(--error-container)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '1rem' }}>

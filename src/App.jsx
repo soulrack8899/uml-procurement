@@ -14,7 +14,7 @@ import PaymentRequest from './pages/PaymentRequest'
 import AdminSettings from './pages/AdminSettings'
 import TenantOnboarding from './pages/TenantOnboarding'
 import Login from './pages/Login'
-import UserOnboarding from './pages/UserOnboarding'
+import UserManagement from './pages/UserManagement'
 import SystemManagement from './pages/SystemManagement'
 import Register from './pages/Register'
 
@@ -126,7 +126,7 @@ function AppContent() {
     { id: '/payment-request', label: 'Payables', icon: <FileText size={20} /> },
     { id: '/vendors', label: 'Vendors', icon: <Users size={20} /> },
     { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'] },
-    { id: '/onboard-users', label: 'User Directory', icon: <UserPlus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/user-management', label: 'User Management', icon: <UserPlus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
     { id: '/system-management', label: 'System Admin', icon: <Shield size={20} />, roles: ['GLOBAL_ADMIN'] },
     { id: '/admin-settings', label: 'Tenant Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
   ]
@@ -390,7 +390,7 @@ function AppContent() {
                   <Route path="/payment-request" element={<PaymentRequest />} />
                   <Route path="/admin-settings" element={<AdminSettings />} />
                   <Route path="/onboard" element={<TenantOnboarding />} />
-                  <Route path="/onboard-users" element={<UserOnboarding />} />
+                  <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/system-management" element={<SystemManagement />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/login" element={<Navigate to="/" />} />
