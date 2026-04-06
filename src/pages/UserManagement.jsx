@@ -44,8 +44,10 @@ const UserManagement = () => {
     try {
       const userData = await procurementApi.getUsers();
       setUsers(userData || []);
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error("User Loading Error:", err);
+      alert("User Sync Failed: " + err.message);
     } finally {
       setLoading(false);
     }

@@ -32,6 +32,7 @@ const SystemManagement = () => {
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error("Data Loading Error:", err);
+      alert("System Sync Failed: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -139,7 +140,10 @@ const SystemManagement = () => {
                   style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontWeight: 600, fontSize: '0.875rem' }} 
                 />
              </div>
-             <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontSize: '0.625rem', color: 'var(--outline)', fontWeight: 800 }}>SYNCED: {lastUpdated}</span>
+                <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
+             </div>
           </div>
 
           <div style={{ overflowX: 'auto' }}>

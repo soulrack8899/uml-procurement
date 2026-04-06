@@ -562,6 +562,18 @@ def get_company_settings(company_id: int, context: dict = Depends(get_active_ses
         b_session.refresh(settings)
     return settings
 
+@app.get("/companies/", response_model=List[Company])
+def list_companies(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    """Fetch all companies for Global Admins, or just the current company for others."""
+    if context['active_role'] == UserRole.GLOBAL_ADMIN:
+        return b_session.exec(select(Company)).all()
+    
+    # Non-global admins only see their associated company
+    if context['company']:
+        return [context['company']]
+    
+    return []
+
 @app.patch("/companies/{company_id}/settings")
 def update_company_settings(company_id: int, threshold: float, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]:
