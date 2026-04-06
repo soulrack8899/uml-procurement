@@ -23,6 +23,11 @@ const VendorDirectory = () => {
     comments: ''
   })
 
+  // Selected Vendor & Order History State
+  const [selectedVendor, setSelectedVendor] = useState(null)
+  const [vendorOrders, setVendorOrders] = useState([])
+  const [fetchingOrders, setFetchingOrders] = useState(false)
+
   // Address Lookup State
   const [addressQuery, setAddressQuery] = useState('')
   const [suggestions, setSuggestions] = useState([])
@@ -105,6 +110,23 @@ const VendorDirectory = () => {
     }
   }
 
+  const handleSelectVendor = async (vendor) => {
+    setSelectedVendor(vendor)
+    setFetchingOrders(true)
+    try {
+      // Fetch procurement history for this vendor
+      const orders = await procurementApi.getProcurementRequests()
+      // Use loose linking to filter orders by vendor name or id if available
+      const filtered = orders.filter(o => o.vendor_id === vendor.id || o.vendor_name === vendor.name)
+      setVendorOrders(filtered)
+    } catch (err) {
+      console.error('Failed to fetch vendor history', err)
+      setVendorOrders([])
+    } finally {
+      setFetchingOrders(false)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2.5rem', position: 'relative' }}>
       
@@ -132,8 +154,8 @@ const VendorDirectory = () => {
                   <span style={{ padding: '4px 12px', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>{selectedVendor.vendor_type}</span>
                </div>
 
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem' }}>
-                  <DetailItem icon={<MapPin size={18}/>} label="Full Address" value={`${selectedVendor.address}, ${selectedVendor.city}, ${selectedVendor.state}, ${selectedVendor.country}`} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem' }}>
+                  <DetailItem icon={<MapPin size={18}/>} label="Full Address" value={`${selectedVendor.address || ''}, ${selectedVendor.city || ''}, ${selectedVendor.state || ''}, ${selectedVendor.country || ''}`} />
                   <DetailItem icon={<Phone size={18}/>} label="Contact Support" value={selectedVendor.contact} />
                   {selectedVendor.comments && <DetailItem icon={<MessageSquare size={18}/>} label="Internal Context" value={selectedVendor.comments} italic />}
                </div>
@@ -360,7 +382,9 @@ const VendorDirectory = () => {
               </div>
             )}
 
-            <button style={{ width: '100%', padding: '1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: 'auto', hover: { background: 'var(--surface-container-highest)' } }}>
+            <button 
+              onClick={() => handleSelectVendor(vendor)}
+              style={{ width: '100%', padding: '1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: 'auto' }}>
                Vendor Profile <ArrowRight size={16}/>
             </button>
           </motion.div>
@@ -375,5 +399,15 @@ const VendorDirectory = () => {
     </div>
   )
 }
+
+const DetailItem = ({ icon, label, value, italic }) => (
+  <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+    <div style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }}>{icon}</div>
+    <div>
+      <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.25rem', letterSpacing: '0.05em' }}>{label}</p>
+      <p style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--on-surface)', lineHeight: 1.4, fontStyle: italic ? 'italic' : 'normal' }}>{value || 'Not provided'}</p>
+    </div>
+  </div>
+)
 
 export default VendorDirectory
