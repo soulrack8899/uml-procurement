@@ -191,7 +191,10 @@ const UserManagement = () => {
                    <Search size={18} style={{ color: 'var(--outline)' }} />
                    <input placeholder="Search by name or email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', fontWeight: 600, fontSize: '0.875rem' }} />
                 </div>
-                <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '0.625rem', color: 'var(--outline)', fontWeight: 800 }}>SYNCED: {lastUpdated}</span>
+                    <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
+                 </div>
              </div>
 
              <div style={{ overflowX: 'auto' }}>

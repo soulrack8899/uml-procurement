@@ -14,6 +14,7 @@ const SystemManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('ALL');
   const [actionLoading, setActionLoading] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString());
 
   useEffect(() => {
     fetchData();
@@ -28,6 +29,7 @@ const SystemManagement = () => {
       ]);
       setUsers(userData || []);
       setCompanies(companyData || []);
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error("Data Loading Error:", err);
     } finally {
