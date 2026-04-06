@@ -24,6 +24,8 @@ from pydantic import BaseModel
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import timedelta
+from alembic.config import Config
+from alembic import command
 import hashlib
 
 # Security Contexts
@@ -170,7 +172,19 @@ def get_business_session():
 @app.on_event("startup")
 def on_startup():
     logger.info("INITIATING DUAL-DATABASE BOOTSTRAP...")
-    create_db_and_tables()
+    
+    # Run Migrations Automatically
+    try:
+        logger.info("Running database migrations...")
+        alembic_cfg = Config("server/alembic.ini")
+        # Ensure it knows where the migration scripts are
+        alembic_cfg.set_main_option("script_location", "server/migrations")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Migrations completed successfully.")
+    except Exception as e:
+        logger.error(f"Migration error: {e}")
+        # Fallback to simple creation if migrations fail (e.g. initial setup)
+        create_db_and_tables()
     
     # Seeding Logic
     from sqlalchemy import text
