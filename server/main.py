@@ -17,7 +17,7 @@ from models import (
     auth_engine, procurement_engine, create_db_and_tables, 
     ProcurementRequest, LineItem, FileMetadata, AuditLog, StatusEnum, 
     UserRole, Company, CompanySettings, PettyCash, PettyCashStatus, 
-    User, TenantAccess
+    User, TenantAccess, Vendor
 )
 from services.po_generator import generate_po_pdf
 from pydantic import BaseModel
@@ -106,6 +106,7 @@ class RequestCreate(BaseModel):
     total_amount: float
     items: List[LineItemCreate]
     quotation_url: Optional[str] = None
+    comments: Optional[str] = None
 
 class LoginRequest(BaseModel):
     email: str
@@ -186,6 +187,50 @@ def on_startup():
                 b_session.refresh(merakai)
                 b_session.add(CompanySettings(company_id=umlab.id, approval_threshold=5000.0))
                 b_session.add(CompanySettings(company_id=merakai.id, approval_threshold=10000.0))
+                
+                # Seed Vendors for UMLAB
+                b_session.add_all([
+                    Vendor(
+                        name="Borneo Scientific Supplies", 
+                        vendor_type="Lab Equipment", 
+                        location="Kuching, Sarawak", 
+                        address="Lot 123, Jalan Demak Laut",
+                        city="Kuching",
+                        state="Sarawak",
+                        postal_code="93050",
+                        contact="+60 82-442 331", 
+                        rating=4.8, 
+                        company_id=umlab.id,
+                        comments="Main supplier for laboratory glassware."
+                    ),
+                    Vendor(
+                        name="Thermo Fisher Scientific", 
+                        vendor_type="Reagent Kits", 
+                        location="Kuala Lumpur", 
+                        address="No. 1, Jalan Pelukis U1/46, Temasya Industrial Park",
+                        city="Shah Alam",
+                        state="Selangor",
+                        postal_code="40150",
+                        contact="+60 3-8948 2000", 
+                        rating=4.9, 
+                        company_id=umlab.id,
+                        comments="Global partner for biological reagents."
+                    ),
+                    Vendor(
+                        name="Shimadzu Asia Pacific", 
+                        vendor_type="Spectrometer Systems", 
+                        location="Singapore", 
+                        address="79 Science Park Dr",
+                        city="Singapore",
+                        state="Singapore",
+                        postal_code="118264",
+                        country="Singapore",
+                        contact="+65 6778 6280", 
+                        rating=4.7, 
+                        company_id=umlab.id,
+                        comments="High-end analytical instruments."
+                    ),
+                ])
                 b_session.commit()
         except: b_session.rollback()
 
@@ -686,6 +731,18 @@ def create_petty_cash(pc: PettyCash, context: dict = Depends(get_active_session_
     b_session.commit()
     b_session.refresh(pc)
     return pc
+
+@app.get("/vendors/", response_model=List[Vendor])
+def list_vendors(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    return b_session.exec(select(Vendor).where(Vendor.company_id == context['company'].id)).all()
+
+@app.post("/vendors/", response_model=Vendor)
+def create_vendor(v: Vendor, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    v.company_id = context['company'].id
+    b_session.add(v)
+    b_session.commit()
+    b_session.refresh(v)
+    return v
 
 # --- Static File Serving ---
 from fastapi.staticfiles import StaticFiles

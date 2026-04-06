@@ -72,6 +72,7 @@ class Company(SQLModel, table=True):
     settings: "CompanySettings" = Relationship(back_populates="company")
     requests: List["ProcurementRequest"] = Relationship(back_populates="company")
     petty_cash: List["PettyCash"] = Relationship(back_populates="company")
+    vendors: List["Vendor"] = Relationship(back_populates="company")
 
 class CompanySettings(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -90,6 +91,7 @@ class ProcurementRequest(SQLModel, table=True):
     total_amount: float
     status: StatusEnum = Field(default=StatusEnum.DRAFT)
     quotation_url: Optional[str] = None
+    comments: Optional[str] = None
     created_by: Optional[int] = Field(default=None) # Loose link to Auth DB
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -133,6 +135,24 @@ class PettyCash(SQLModel, table=True):
     disbursed_by_id: Optional[int] = Field(default=None) # Loose link to Auth DB
     
     company: Company = Relationship(back_populates="petty_cash")
+
+class Vendor(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    company_id: int = Field(foreign_key="company.id")
+    name: str
+    vendor_type: str
+    location: Optional[str] = None # Keeping for legacy/compatibility if needed, but primary is detailed address
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    country: Optional[str] = Field(default="Malaysia")
+    contact: Optional[str] = None
+    rating: float = Field(default=5.0)
+    comments: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    company: Company = Relationship(back_populates="vendors")
 
 class AuditLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -179,6 +199,6 @@ def create_db_and_tables():
     procurement_tables = [
         TenantAccess.__table__, Company.__table__, CompanySettings.__table__,
         ProcurementRequest.__table__, LineItem.__table__, FileMetadata.__table__,
-        PettyCash.__table__, AuditLog.__table__
+        PettyCash.__table__, AuditLog.__table__, Vendor.__table__
     ]
     SQLModel.metadata.create_all(procurement_engine, tables=procurement_tables)

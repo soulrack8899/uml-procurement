@@ -128,6 +128,23 @@ export const procurementApi = {
     return response.json();
   },
 
+  // --- Vendors ---
+  getVendors: async () => {
+    const response = await fetch(`${API_BASE_URL}/vendors/`, { headers: getHeaders() });
+    if (!response.ok) throw new Error("Failed to fetch vendors");
+    return response.json();
+  },
+
+  createVendor: async (data) => {
+    const response = await fetch(`${API_BASE_URL}/vendors/`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error("Failed to register vendor");
+    return response.json();
+  },
+
   // --- Petty Cash ---
   getPettyCash: async () => {
     const response = await fetch(`${API_BASE_URL}/petty-cash/`, { headers: getHeaders() });
