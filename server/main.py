@@ -240,13 +240,23 @@ def on_startup():
         master_pass = os.getenv("MASTER_ADMIN_PASSWORD") or "pomodorotechco123"
         master = a_session.exec(select(User).where(User.email == master_email)).first()
         if not master:
-            master = User(name="Global Admin", email=master_email, password=get_password_hash(master_pass), global_role=UserRole.GLOBAL_ADMIN, approval_status="APPROVED", is_temporary_password=False)
+            logger.info(f"SEEDING MASTER ADMIN: {master_email}")
+            master = User(
+                name="Global Admin", 
+                email=master_email, 
+                password=get_password_hash(master_pass), 
+                global_role=UserRole.GLOBAL_ADMIN, 
+                approval_status="APPROVED", 
+                is_temporary_password=False
+            )
             a_session.add(master)
+            a_session.commit()
         else:
-            master.password = get_password_hash(master_pass)
-            master.global_role = UserRole.GLOBAL_ADMIN
-            a_session.add(master)
-        a_session.commit()
+            # Only update role to ensure they remain Global Admin, but DON'T reset password
+            if master.global_role != UserRole.GLOBAL_ADMIN:
+                master.global_role = UserRole.GLOBAL_ADMIN
+                a_session.add(master)
+                a_session.commit()
 
         # 3. Seed UMLAB Company Admin
         umlab = b_session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
@@ -262,11 +272,9 @@ def on_startup():
              # Bridge link in Business DB
              access = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == u_admin.id, TenantAccess.company_id == umlab.id)).first()
              if not access:
+                  logger.info(f"LINKING UMLAB ADMIN ACCESS...")
                   b_session.add(TenantAccess(user_id=u_admin.id, company_id=umlab.id, role=UserRole.ADMIN))
-             else:
-                  access.role = UserRole.ADMIN
-                  b_session.add(access)
-             b_session.commit()
+                  b_session.commit()
 
 ROLE_PRIORITY = {
     UserRole.GLOBAL_ADMIN: 100,
