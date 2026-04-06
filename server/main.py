@@ -597,7 +597,12 @@ def list_users(context: dict = Depends(get_active_session_context), auth_session
         # Determine local and global roles
         if context['company']:
             local_roles = [t.role for t in tenants if t.company_id == context['company'].id]
-            role_label = ", ".join([r.value if hasattr(r, 'value') else str(r) for r in local_roles]) if local_roles else "No Access"
+            if local_roles:
+                role_label = ", ".join([r.value if hasattr(r, 'value') else str(r) for r in local_roles])
+            elif u.global_role == UserRole.GLOBAL_ADMIN:
+                role_label = "GLOBAL ADMIN"
+            else:
+                role_label = "No Access"
         else:
             role_label = u.global_role.value if hasattr(u.global_role, 'value') else str(u.global_role)
             local_roles = []
