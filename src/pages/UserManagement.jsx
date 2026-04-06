@@ -11,6 +11,7 @@ const UserManagement = () => {
   const [activeTab, setActiveTab] = useState('DIRECTORY'); // DIRECTORY or PROVISION
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString());
   
   // Provisioning Form State
   const [companies, setCompanies] = useState([]);
@@ -195,7 +196,13 @@ const UserManagement = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <span style={{ fontSize: '0.625rem', color: 'var(--outline)', fontWeight: 800 }}>SYNCED: {lastUpdated}</span>
-                    <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
+                    <button 
+                       disabled={loading}
+                       onClick={fetchData} 
+                       style={{ background: 'none', border: 'none', color: loading ? 'var(--outline)' : 'var(--primary)', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                       <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                    </button>
                  </div>
              </div>
 
@@ -210,65 +217,73 @@ const UserManagement = () => {
                    </tr>
                  </thead>
                  <tbody>
-                   {loading ? (
-                       <tr><td colSpan="4" style={{ textAlign: 'center', padding: '4rem' }}>Loading directory...</td></tr>
-                   ) : filteredUsers.map((user) => (
-                     <tr key={user.id}>
-                       <td style={S.td}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                             <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-pill)', background: 'var(--primary-container)', color: 'var(--on-primary-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem' }}>{user.name[0]}</div>
-                             <div>
-                                <div style={{ fontWeight: 800 }}>{user.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{user.email}</div>
-                             </div>
-                          </div>
-                       </td>
+                    {loading ? (
+                        <tr><td colSpan="4" style={{ textAlign: 'center', padding: '4rem', fontWeight: 800, color: 'var(--outline)' }}>Syncing directory...</td></tr>
+                    ) : filteredUsers.length === 0 ? (
+                        <tr>
+                           <td colSpan="4" style={{ textAlign: 'center', padding: '6rem 4rem' }}>
+                              <Users size={40} style={{ margin: '0 auto 1.5rem', opacity: 0.1 }} />
+                              <p style={{ fontWeight: 800, color: 'var(--outline)' }}>No team members found</p>
+                              <p style={{ fontSize: '0.75rem', color: 'var(--outline)', marginTop: '0.5rem' }}>{searchTerm ? 'Try adjusting your search filters.' : 'Start by provisioning a new account.'}</p>
+                           </td>
+                        </tr>
+                    ) : filteredUsers.map((user) => (
+                      <tr key={user.id} className="hover-lift">
                         <td style={S.td}>
-                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxWidth: '300px' }}>
-                              {availableRoles.map(r => {
-                                 const isAssigned = (user.roles || [user.global_role]).includes(r.id);
-                                 return (
-                                    <button 
-                                      key={r.id}
-                                      onClick={() => {
-                                         const current = (user.roles || [user.global_role]);
-                                         const next = isAssigned ? current.filter(x => x !== r.id) : [...current, r.id];
-                                         if (next.length > 0) handleUpdateRole(user.id, null, next);
-                                      }}
-                                      style={{ 
-                                         fontSize: '0.625rem', fontWeight: 900, 
-                                         background: isAssigned ? 'var(--primary-container)' : 'var(--surface-container-high)',
-                                         color: isAssigned ? 'var(--on-primary-container)' : 'var(--outline)',
-                                         padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: 'none', cursor: 'pointer',
-                                         transition: 'all 0.2s', border: isAssigned ? '1px solid var(--primary)' : '1px solid transparent'
-                                      }}
-                                    >
-                                       {r.id === 'ADMIN' ? 'ADMIN' : r.id}
-                                    </button>
-                                 );
-                              })}
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-pill)', background: 'var(--primary-container)', color: 'var(--on-primary-container)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '0.75rem' }}>{user.name[0]}</div>
+                              <div>
+                                 <div style={{ fontWeight: 800 }}>{user.name}</div>
+                                 <div style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{user.email}</div>
+                              </div>
                            </div>
                         </td>
+                         <td style={S.td}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', maxWidth: '300px' }}>
+                               {availableRoles.map(r => {
+                                  const isAssigned = (user.roles || [user.global_role]).includes(r.id);
+                                  return (
+                                     <button 
+                                       key={r.id}
+                                       onClick={() => {
+                                          const current = (user.roles || [user.global_role]);
+                                          const next = isAssigned ? current.filter(x => x !== r.id) : [...current, r.id];
+                                          if (next.length > 0) handleUpdateRole(user.id, null, next);
+                                       }}
+                                       style={{ 
+                                          fontSize: '0.625rem', fontWeight: 900, 
+                                          background: isAssigned ? 'var(--primary-container)' : 'var(--surface-container-high)',
+                                          color: isAssigned ? 'var(--on-primary-container)' : 'var(--outline)',
+                                          padding: '2px 8px', borderRadius: 'var(--radius-pill)', border: 'none', cursor: 'pointer',
+                                          transition: 'all 0.2s', border: isAssigned ? '1px solid var(--primary)' : '1px solid transparent'
+                                       }}
+                                     >
+                                        {r.id === 'ADMIN' ? 'ADMIN' : r.id}
+                                     </button>
+                                  );
+                               })}
+                            </div>
+                         </td>
 
 
-                       <td style={S.td}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, color: user.approval_status === 'APPROVED' ? 'var(--tertiary)' : 'var(--error)' }}>
-                             {user.approval_status === 'APPROVED' ? <ShieldCheck size={14} /> : <Lock size={14} />}
-                             {user.approval_status}
-                          </div>
-                       </td>
-                       <td style={{ ...S.td, textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                             <button onClick={() => handleResetPassword(user.id)} style={{ padding: '0.5rem 1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Reset PW</button>
-                             {user.approval_status === 'APPROVED' ? (
-                               <button onClick={() => handleUpdateStatus(user.id, 'SUSPENDED')} style={{ padding: '0.5rem 1rem', background: 'none', border: '1px solid var(--error)', color: 'var(--error)', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Suspend</button>
-                             ) : (
-                               <button onClick={() => handleUpdateStatus(user.id, 'APPROVED')} className="gradient-fill" style={{ padding: '0.5rem 1rem', border: 'none', color: 'white', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Approve</button>
-                             )}
-                          </div>
-                       </td>
-                     </tr>
-                   ))}
+                        <td style={S.td}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, color: user.approval_status === 'APPROVED' ? 'var(--tertiary)' : 'var(--error)' }}>
+                              {user.approval_status === 'APPROVED' ? <ShieldCheck size={14} /> : <Lock size={14} />}
+                              {user.approval_status}
+                           </div>
+                        </td>
+                        <td style={{ ...S.td, textAlign: 'right' }}>
+                           <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
+                              <button onClick={() => handleResetPassword(user.id)} style={{ padding: '0.5rem 1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Reset PW</button>
+                              {user.approval_status === 'APPROVED' ? (
+                                <button onClick={() => handleUpdateStatus(user.id, 'SUSPENDED')} style={{ padding: '0.5rem 1rem', background: 'none', border: '1px solid var(--error)', color: 'var(--error)', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Suspend</button>
+                              ) : (
+                                <button onClick={() => handleUpdateStatus(user.id, 'APPROVED')} className="gradient-fill" style={{ padding: '0.5rem 1rem', border: 'none', color: 'white', borderRadius: 'var(--radius-pill)', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}>Approve</button>
+                              )}
+                           </div>
+                        </td>
+                      </tr>
+                    ))}
                  </tbody>
                </table>
              </div>
