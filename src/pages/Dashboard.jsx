@@ -8,6 +8,8 @@ import { useCompany } from '../App'
 const Dashboard = () => {
   const { currentCompany, activeRole, isMobile } = useCompany()
   const [requests, setRequests] = useState([])
+  const [stats, setStats] = useState({ pending: 0, completed: 0, total_spend: 0, vendors: 0, claims: 0, threshold: 5000 })
+  const [auditLogs, setAuditLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
@@ -18,30 +20,27 @@ const Dashboard = () => {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const data = await procurementApi.getRequests()
+      const [reqData, statsData, logsData] = await Promise.all([
+        procurementApi.getRequests(),
+        procurementApi.getDashboardStats(),
+        procurementApi.getRecentAuditLogs()
+      ])
+      
+      // Filter requests if role is REQUESTER
       if (activeRole === 'REQUESTER') {
         const myUserId = parseInt(localStorage.getItem("currentUserId") || "1")
-        setRequests(data.filter(r => r.created_by === myUserId))
+        setRequests(reqData.filter(r => r.created_by === myUserId))
       } else {
-        setRequests(data)
+        setRequests(reqData)
       }
+      
+      setStats(statsData)
+      setAuditLogs(logsData)
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }
-
-  // Calculate stats
-  const pendingManager = requests.filter(r => r.status.includes('MANAGER')).length
-  const pendingDirector = requests.filter(r => r.status.includes('DIRECTOR')).length
-  const completed = requests.filter(r => r.status === 'APPROVED' || r.status === 'COMPLETED' || r.status === 'PO_ISSUED').length
-
-  const getStep = (status) => {
-    if (status.includes('MANAGER')) return 2;
-    if (status.includes('DIRECTOR')) return 3;
-    if (status === 'APPROVED' || status === 'COMPLETED' || status === 'PO_ISSUED' || status === 'PAID') return 4;
-    return 1;
   }
 
   return (
@@ -53,18 +52,19 @@ const Dashboard = () => {
       {/* Performance Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
         
-        <StatsCard label="Pending Manager" count={pendingManager} color="var(--secondary)" />
-        <StatsCard label="Pending Director" count={pendingDirector} color="var(--tertiary)" />
+        <StatsCard label="Pending Approval" count={stats.pending} color="var(--secondary)" />
+        <StatsCard label="Active Vendors" count={stats.vendors} color="var(--tertiary)" />
+        
         <div className="gradient-fill" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, borderRadius: 'var(--radius-xl)', color: 'white', boxShadow: '0 20px 40px rgba(0,77,81,0.15)' }}>
-          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>Monthly Summary</span>
+          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>Total Approved Spend</span>
           <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
             <div>
-              <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>{completed.toString().padStart(2, '0')}</p>
-              <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', marginTop: '0.5rem' }}>Completed</p>
+              <p style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>RM {stats.total_spend.toLocaleString()}</p>
+              <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', marginTop: '0.5rem' }}>Committed Capital</p>
             </div>
             <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.2)' }} />
             <div>
-              <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>0.0</p>
+              <p style={{ fontFamily: 'var(--font-headline)', fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1 }}>{stats.claims.toString().padStart(2, '0')}</p>
               <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', marginTop: '0.5rem' }}>Claims</p>
             </div>
           </div>
@@ -99,21 +99,33 @@ const Dashboard = () => {
 
         {/* Sidebar Activity */}
         <div style={{ gridColumn: isMobile ? 'auto' : 'span 4', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="surface-card" style={{ minHeight: 400, border: 'none', padding: '2rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2rem' }}>Live Systems</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-              <ActivityItem time="14:22 PM" title="Director Approval" detail="PR-2023-0870 Laboratory Safety Quota" active />
-              <ActivityItem time="13:45 PM" title="Payment Disbursed" detail="Vendor: Agilent Technologies ($4.2k)" />
-              <ActivityItem time="11:05 AM" title="Liaison Alert" detail="New procurement request from Unit A" />
+          <div className="surface-card" style={{ minHeight: 400, border: 'none', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2rem' }}>Audit Feed (Live)</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', flex: 1 }}>
+              {auditLogs.length === 0 ? (
+                <div style={{ color: 'var(--outline)', fontSize: '0.875rem', textAlign: 'center', marginTop: '2rem' }}>No recent operations.</div>
+              ) : auditLogs.slice(0, 5).map((log, i) => (
+                <ActivityItem 
+                  key={log.id} 
+                  time={new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
+                  title={log.action} 
+                  detail={`${log.user_name} (${log.user_role})`}
+                  active={i === 0} 
+                />
+              ))}
             </div>
           </div>
 
           <div style={{ background: 'var(--primary-fixed)', padding: '2rem', borderRadius: 'var(--radius-xl)', position: 'relative', overflow: 'hidden' }}>
             <ShieldCheck size={120} style={{ position: 'absolute', right: -20, bottom: -20, opacity: 0.1, color: 'var(--primary)' }} />
-            <h4 style={{ fontFamily: 'var(--font-bold)', fontSize: '1.25rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Expenditure Policy</h4>
-            <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', lineHeight: 1.6 }}>
-               Orders exceeding <strong>RM 5,000</strong> require Executive Director approval.
+            <h4 style={{ fontFamily: 'var(--font-bold)', fontSize: '1.25rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Approval Policy</h4>
+            <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+               Orders exceeding <strong>RM {stats.threshold?.toLocaleString()}</strong> require Executive Director approval.
             </p>
+            <div style={{ height: 6, background: 'rgba(14,77,81,0.1)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
+                <div style={{ width: '65%', height: '100%', background: 'var(--primary)', borderRadius: 'inherit' }} />
+            </div>
+            <p style={{ fontSize: '0.625rem', marginTop: '0.75rem', color: 'var(--outline)', fontWeight: 800, textTransform: 'uppercase' }}>Utilization: 65% of monthly target</p>
           </div>
         </div>
       </div>
@@ -127,12 +139,12 @@ const StatsCard = ({ label, count, color }) => (
     <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
       <div>
         <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>{count.toString().padStart(2, '0')}</p>
-        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Procurements</p>
+        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Active Volume</p>
       </div>
       <div style={{ width: 1, height: 40, background: 'var(--outline-variant)' }} />
       <div>
-        <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3.5rem', fontWeight: 900, color: color, letterSpacing: '-0.04em', lineHeight: 1 }}>00</p>
-        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Claims</p>
+        <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3.5rem', fontWeight: 900, color: color, letterSpacing: '-0.04em', lineHeight: 1 }}>--</p>
+        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Trend</p>
       </div>
     </div>
   </div>

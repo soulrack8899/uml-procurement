@@ -108,6 +108,65 @@ const VendorDirectory = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2.5rem', position: 'relative' }}>
       
+      {/* Vendor Profile Drawer */}
+      <AnimatePresence>
+        {selectedVendor && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', justifyContent: 'flex-end' }}>
+            <motion.div 
+               initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+               style={{ width: isMobile ? '100%' : '500px', background: 'white', height: '100%', padding: '2.5rem', boxShadow: '-20px 0 60px rgba(0,0,0,0.1)', overflowY: 'auto' }}>
+               
+               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3rem' }}>
+                  <button onClick={() => setSelectedVendor(null)} style={{ background: 'var(--surface-container-low)', border: 'none', padding: '0.5rem 1rem', borderRadius: 'var(--radius-pill)', color: 'var(--outline)', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <X size={16}/> Close
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <Star size={16} fill="var(--primary)" color="var(--primary)" />
+                     <span style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '1.25rem' }}>{selectedVendor.rating.toFixed(1)}</span>
+                  </div>
+               </div>
+
+               <div style={{ marginBottom: '2.5rem' }}>
+                  <div style={{ width: 80, height: 80, background: 'var(--primary)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '2rem', marginBottom: '1.5rem' }}>{selectedVendor.name[0]}</div>
+                  <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>{selectedVendor.name}</h2>
+                  <span style={{ padding: '4px 12px', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>{selectedVendor.vendor_type}</span>
+               </div>
+
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem' }}>
+                  <DetailItem icon={<MapPin size={18}/>} label="Full Address" value={`${selectedVendor.address}, ${selectedVendor.city}, ${selectedVendor.state}, ${selectedVendor.country}`} />
+                  <DetailItem icon={<Phone size={18}/>} label="Contact Support" value={selectedVendor.contact} />
+                  {selectedVendor.comments && <DetailItem icon={<MessageSquare size={18}/>} label="Internal Context" value={selectedVendor.comments} italic />}
+               </div>
+
+               <div style={{ borderTop: '1px solid var(--outline-variant-low)', paddingTop: '2.5rem' }}>
+                  <h3 style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '1.5rem', letterSpacing: '0.1em' }}>Order History</h3>
+                  
+                  {fetchingOrders ? (
+                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--outline)', fontSize: '0.875rem' }}>Syncing order history...</div>
+                  ) : vendorOrders.length === 0 ? (
+                    <div style={{ padding: '3rem', textAlign: 'center', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-md)', color: 'var(--outline)', fontSize: '0.875rem' }}>No previous transactions found.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                       {vendorOrders.map(order => (
+                         <div key={order.id} style={{ padding: '1rem', border: '1px solid var(--outline-variant-low)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                               <p style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--on-surface)' }}>{order.title}</p>
+                               <p style={{ fontSize: '0.625rem', color: 'var(--outline)', marginTop: '2px' }}>{new Date(order.created_at).toLocaleDateString()}</p>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                               <p style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)' }}>RM {order.total_amount.toLocaleString()}</p>
+                               <span style={{ fontSize: '0.5rem', fontWeight: 900, color: 'var(--tertiary)' }}>{order.status}</span>
+                            </div>
+                         </div>
+                       ))}
+                    </div>
+                  )}
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Registration Modal */}
       <AnimatePresence>
         {showRegister && (

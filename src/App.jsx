@@ -47,6 +47,7 @@ function AppContent() {
   const [userName, setUserName] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("currentUserId"))
   const [refreshKey, setRefreshKey] = useState(Date.now())
+  const [notifications, setNotifications] = useState({ approvals: 0, users: 0 })
   const location = useLocation()
 
   useEffect(() => {
@@ -68,7 +69,10 @@ function AppContent() {
   }, [isAuthenticated])
 
   useEffect(() => {
-    if (isAuthenticated && currentCompany) fetchActiveRole()
+    if (isAuthenticated && currentCompany) {
+        fetchActiveRole();
+        fetchNotifications();
+    }
   }, [isAuthenticated, currentCompany, refreshKey])
 
   const fetchCompanies = async () => {
@@ -93,6 +97,16 @@ function AppContent() {
       console.error("Failed to identify role:", err)
       setActiveRole(null)
     }
+  }
+
+  const fetchNotifications = async () => {
+    try {
+      const stats = await procurementApi.getDashboardStats();
+      setNotifications({
+          approvals: stats.pending || 0,
+          users: 0 
+      });
+    } catch (err) { console.error(err); }
   }
 
   const selectTenant = useCallback((company) => {
@@ -125,7 +139,7 @@ function AppContent() {
     { id: '/petty-cash', label: 'Petty Cash', icon: <Wallet size={20} /> },
     { id: '/payment-request', label: 'Payables', icon: <FileText size={20} /> },
     { id: '/vendors', label: 'Vendors', icon: <Users size={20} /> },
-    { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'] },
+    { id: '/approvals', label: 'Approvals', icon: <CheckSquare size={20} />, roles: ['MANAGER', 'DIRECTOR', 'GLOBAL_ADMIN', 'ADMIN'], badge: notifications.approvals },
     { id: '/user-management', label: 'User Management', icon: <UserPlus size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
     { id: '/system-management', label: 'System Admin', icon: <Shield size={20} />, roles: ['GLOBAL_ADMIN'] },
     { id: '/admin-settings', label: 'Tenant Settings', icon: <Settings size={20} />, roles: ['GLOBAL_ADMIN', 'ADMIN'] },
@@ -252,7 +266,18 @@ function AppContent() {
                   onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--outline)' }}
                 >
                   <span style={{ flexShrink: 0, display: 'flex' }}>{item.icon}</span>
-                  {(sidebarOpen || isMobile) && <span>{item.label}</span>}
+                  {(sidebarOpen || isMobile) && <span style={{ flex: 1 }}>{item.label}</span>}
+                  {(sidebarOpen || isMobile) && item.badge > 0 && (
+                    <span style={{ 
+                      background: 'var(--error)', color: 'white', 
+                      fontSize: '0.625rem', fontWeight: 900, 
+                      minWidth: 20, height: 20, borderRadius: 10,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 6px'
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}

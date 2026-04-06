@@ -145,6 +145,16 @@ export const procurementApi = {
     return response.json();
   },
 
+  getDashboardStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/dashboard/stats`, { headers: getHeaders() });
+    return response.json();
+  },
+
+  getRecentAuditLogs: async () => {
+    const response = await fetch(`${API_BASE_URL}/audit/recent`, { headers: getHeaders() });
+    return response.json();
+  },
+
   // --- Petty Cash ---
   getPettyCash: async () => {
     const response = await fetch(`${API_BASE_URL}/petty-cash/`, { headers: getHeaders() });

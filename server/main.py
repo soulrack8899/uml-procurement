@@ -177,8 +177,9 @@ def on_startup():
     with Session(auth_engine) as a_session, Session(procurement_engine) as b_session:
         # 1. Seed Companies in Business DB
         try:
-            umlab = b_session.exec(select(Company).where(Company.name == "UMLAB Sarawak")).first()
-            if not umlab:
+            company_count = len(b_session.exec(select(Company)).all())
+            if company_count == 0:
+                logger.info("SEEDING INITIAL COMPANIES...")
                 umlab = Company(name="UMLAB Sarawak", domain="umlab.sarawak.my")
                 merakai = Company(name="Merakai Indah Sdn Bhd", domain="merakai.indah.my")
                 b_session.add_all([umlab, merakai])
@@ -754,7 +755,62 @@ def create_vendor(v: Vendor, context: dict = Depends(get_active_session_context)
     b_session.add(v)
     b_session.commit()
     b_session.refresh(v)
+    
+    # Audit log
+    b_session.add(AuditLog(
+        company_id=context['company'].id,
+        action=f"New Vendor Registered: {v.name}",
+        user_name=context['user'].name,
+        user_role=context['active_role']
+    ))
+    b_session.commit()
     return v
+
+# --- Dashboard & Intelligence Endpoints ---
+
+@app.get("/dashboard/stats")
+def get_dashboard_stats(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    """Aggregated statistics for the dashboard dashboard widgets."""
+    cid = context['company'].id if context['company'] else None
+    if not cid and context['active_role'] != UserRole.GLOBAL_ADMIN:
+        return {"pending": 0, "completed": 0, "total_spend": 0, "vendors": 0, "claims": 0}
+
+    # Base Queries
+    req_query = select(ProcurementRequest)
+    pc_query = select(PettyCash)
+    v_query = select(Vendor)
+
+    if cid:
+        req_query = req_query.where(ProcurementRequest.company_id == cid)
+        pc_query = pc_query.where(PettyCash.company_id == cid)
+        v_query = v_query.where(Vendor.company_id == cid)
+
+    requests = b_session.exec(req_query).all()
+    claims = b_session.exec(pc_query).all()
+    vendors = b_session.exec(v_query).all()
+
+    # Calculations
+    pending = len([r for r in requests if "PENDING" in r.status.value])
+    completed = len([r for r in requests if r.status in [StatusEnum.APPROVED, StatusEnum.PO_ISSUED, StatusEnum.PAID]])
+    total_spend = sum([r.total_amount for r in requests if r.status in [StatusEnum.APPROVED, StatusEnum.PO_ISSUED, StatusEnum.PAID]])
+    
+    return {
+        "pending": pending,
+        "completed": completed,
+        "total_spend": total_spend,
+        "vendors": len(vendors),
+        "claims": len(claims),
+        "threshold": 5000.0 # Standard threshold for display
+    }
+
+@app.get("/audit/recent", response_model=List[AuditLog])
+def get_recent_audit_logs(limit: int = 20, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    """Fetch the latest audit logs for the activity feed."""
+    query = select(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit)
+    if context['active_role'] != UserRole.GLOBAL_ADMIN:
+        query = query.where(AuditLog.company_id == context['company'].id)
+    
+    return b_session.exec(query).all()
 
 # --- Static File Serving ---
 from fastapi.staticfiles import StaticFiles
