@@ -582,11 +582,17 @@ def update_company_settings(company_id: int, threshold: float, context: dict = D
 def list_users(context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
     if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
     
-    if context['active_role'] == UserRole.GLOBAL_ADMIN:
+    # Check if user is Global Admin by checking the string value of their active role
+    is_global_admin = str(context['active_role']) == str(UserRole.GLOBAL_ADMIN.value) or context['active_role'] == UserRole.GLOBAL_ADMIN
+    
+    if is_global_admin:
         users = auth_session.exec(select(User)).all()
     else:
         # Get only users in THIS company
-        company_access = b_session.exec(select(TenantAccess).where(TenantAccess.company_id == context['company'].id)).all()
+        cid = context['company'].id if context['company'] else None
+        if not cid:
+             return [] # Non-admins see nothing if no company context
+        company_access = b_session.exec(select(TenantAccess).where(TenantAccess.company_id == cid)).all()
         target_user_ids = [a.user_id for a in company_access]
         users = auth_session.exec(select(User).where(User.id.in_(target_user_ids))).all()
 
@@ -595,24 +601,25 @@ def list_users(context: dict = Depends(get_active_session_context), auth_session
         tenants = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == u.id)).all()
         
         # Determine local and global roles
+        role_label = "No Access"
         if context['company']:
             local_roles = [t.role for t in tenants if t.company_id == context['company'].id]
             if local_roles:
                 role_label = ", ".join([r.value if hasattr(r, 'value') else str(r) for r in local_roles])
-            elif u.global_role == UserRole.GLOBAL_ADMIN:
+            elif str(u.global_role) == str(UserRole.GLOBAL_ADMIN.value) or u.global_role == UserRole.GLOBAL_ADMIN:
                 role_label = "GLOBAL ADMIN"
-            else:
-                role_label = "No Access"
+        elif str(u.global_role) == str(UserRole.GLOBAL_ADMIN.value) or u.global_role == UserRole.GLOBAL_ADMIN:
+            role_label = "GLOBAL ADMIN"
         else:
+            # Global Context view
             role_label = u.global_role.value if hasattr(u.global_role, 'value') else str(u.global_role)
-            local_roles = []
 
         result.append({
             "id": u.id,
             "name": u.name,
             "email": u.email,
             "global_role": role_label,
-            "roles": [r.value if hasattr(r, 'value') else str(r) for r in local_roles],
+            "roles": [r.value if hasattr(r, 'value') else str(r) for r in [t.role for t in tenants if (context['company'] and t.company_id == context['company'].id) or not context['company']]],
             "approval_status": u.approval_status,
             "is_temporary_password": u.is_temporary_password,
             "companies": len(set([t.company_id for t in tenants]))
