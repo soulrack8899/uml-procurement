@@ -176,14 +176,22 @@ def on_startup():
     # Run Migrations Automatically
     try:
         logger.info("Running database migrations...")
-        alembic_cfg = Config("server/alembic.ini")
-        # Ensure it knows where the migration scripts are
-        alembic_cfg.set_main_option("script_location", "server/migrations")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Migrations completed successfully.")
+        import os
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        ini_path = os.path.join(BASE_DIR, "alembic.ini")
+        migrations_path = os.path.join(BASE_DIR, "migrations")
+        
+        if os.path.exists(ini_path):
+            alembic_cfg = Config(ini_path)
+            alembic_cfg.set_main_option("script_location", migrations_path)
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Migrations completed successfully.")
+        else:
+            logger.warning(f"Alembic config not found at {ini_path}, skipping automated migration.")
+            create_db_and_tables()
     except Exception as e:
         logger.error(f"Migration error: {e}")
-        # Fallback to simple creation if migrations fail (e.g. initial setup)
+        # Fallback to simple creation if migrations fail
         create_db_and_tables()
     
     # Seeding Logic
