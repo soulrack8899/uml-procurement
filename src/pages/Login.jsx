@@ -29,6 +29,9 @@ const Login = ({ onLogin }) => {
       
       if (data.is_temporary_password) {
         localStorage.setItem("tempUserId", data.user_id.toString());
+        if (data.active_company_id) {
+          localStorage.setItem("currentCompanyId", data.active_company_id.toString());
+        }
         setShowPwdChange(true);
         setIsLoading(false);
         return;
