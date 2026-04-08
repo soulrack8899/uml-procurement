@@ -34,7 +34,7 @@ const RequestDetails = () => {
   const handleTransition = async (newStatus, action, role) => {
     setTransitioning(newStatus)
     try {
-      await procurementApi.transitionStatus(id, newStatus, action, role)
+      await procurementApi.transitionStatus(id)
       fetchData()
     } catch (err) { alert(err.message) }
     finally { setTransitioning(null) }

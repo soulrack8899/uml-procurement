@@ -115,7 +115,7 @@ const VendorDirectory = () => {
     setFetchingOrders(true)
     try {
       // Fetch procurement history for this vendor
-      const orders = await procurementApi.getProcurementRequests()
+      const orders = await procurementApi.getRequests()
       // Use loose linking to filter orders by vendor name or id if available
       const filtered = orders.filter(o => o.vendor_id === vendor.id || o.vendor_name === vendor.name)
       setVendorOrders(filtered)

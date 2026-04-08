@@ -122,11 +122,21 @@ const AdminSettings = () => {
           </section>
 
           <section style={{ background: 'var(--error-container)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-             <AlertTriangle size={32} />
-             <div>
+             <AlertTriangle size={32} style={{ flexShrink: 0 }} />
+             <div style={{ flex: 1 }}>
                 <p style={{ fontWeight: 900, fontSize: '0.875rem' }}>System Freeze</p>
                 <p style={{ fontSize: '0.75rem', opacity: 0.9 }}>Emergency stop for all procurement requests.</p>
              </div>
+             <button
+               onClick={() => {
+                 if (window.confirm('Are you sure you want to freeze all procurement activity? This cannot be undone remotely.')) {
+                   alert('System Freeze is not yet enabled on this server. Contact your system administrator.')
+                 }
+               }}
+               style={{ padding: '0.5rem 1rem', background: 'white', color: 'var(--error)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}
+             >
+               FREEZE
+             </button>
           </section>
 
         </div>

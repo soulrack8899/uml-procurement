@@ -7,7 +7,7 @@ import { useCompany } from '../App'
 
 const TenantOnboarding = () => {
   const navigate = useNavigate()
-  const { handleCompanyChange, isMobile } = useCompany()
+  const { selectTenant, isMobile } = useCompany()
   const [formData, setFormData] = useState({ 
     name: '', 
     contact_person: '', 
@@ -33,7 +33,7 @@ const TenantOnboarding = () => {
   }
 
   const handleEnterTenant = () => {
-    handleCompanyChange(newCompany)
+    selectTenant(newCompany)
     navigate('/')
   }
 

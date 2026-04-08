@@ -434,6 +434,24 @@ def get_request(request_id: int, context: dict = Depends(get_active_session_cont
         raise HTTPException(status_code=403)
     return req
 
+class RequestUpdate(BaseModel):
+    quotation_url: Optional[str] = None
+    comments: Optional[str] = None
+
+@app.patch("/requests/{request_id}", response_model=ProcurementRequest)
+def update_request(request_id: int, data: RequestUpdate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    req = b_session.get(ProcurementRequest, request_id)
+    if not req: raise HTTPException(status_code=404)
+    if context['active_role'] != UserRole.GLOBAL_ADMIN and req.company_id != context['company'].id:
+        raise HTTPException(status_code=403)
+    for key, value in data.dict(exclude_none=True).items():
+        setattr(req, key, value)
+    req.updated_at = datetime.utcnow()
+    b_session.add(req)
+    b_session.commit()
+    b_session.refresh(req)
+    return req
+
 @app.get("/requests/{request_id}/audit", response_model=List[AuditLog])
 def get_audit_logs(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     return b_session.exec(select(AuditLog).where(AuditLog.request_id == request_id)).all()
