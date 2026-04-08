@@ -787,6 +787,32 @@ def create_petty_cash(pc: PettyCash, context: dict = Depends(get_active_session_
     b_session.refresh(pc)
     return pc
 
+@app.post("/petty-cash/{pc_id}/approve")
+def approve_petty_cash(pc_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    pc = b_session.get(PettyCash, pc_id)
+    if not pc: raise HTTPException(status_code=404)
+    if context['active_role'] not in [UserRole.MANAGER, UserRole.DIRECTOR, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+        raise HTTPException(status_code=403)
+    
+    pc.status = PettyCashStatus.APPROVED
+    b_session.add(pc)
+    b_session.commit()
+    return {"status": "ok"}
+
+@app.post("/petty-cash/{pc_id}/disburse")
+def disburse_petty_cash(pc_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    pc = b_session.get(PettyCash, pc_id)
+    if not pc: raise HTTPException(status_code=404)
+    if context['active_role'] not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+        raise HTTPException(status_code=403)
+    
+    pc.status = PettyCashStatus.DISBURSED
+    pc.disbursed_at = datetime.utcnow()
+    pc.disbursed_by_id = context['user'].id
+    b_session.add(pc)
+    b_session.commit()
+    return {"status": "ok"}
+
 @app.get("/vendors/", response_model=List[Vendor])
 def list_vendors(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     return b_session.exec(select(Vendor).where(Vendor.company_id == context['company'].id)).all()
