@@ -137,30 +137,12 @@ app = FastAPI(title="UMLAB SaaS Master API")
 allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://uml-procurement-internal.vercel.app", "https://procusure.vercel.app"],
-    allow_origin_regex=allow_origin_regex,
+    allow_origins=["*"], # More permissive for the dry run to ensure connectivity
     allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
-
-@app.middleware("http")
-async def force_cors_headers(request: Request, call_next):
-    if request.method == "OPTIONS":
-        origin = request.headers.get("Origin")
-        return JSONResponse(status_code=200, content="OK", headers={
-            "Access-Control-Allow-Origin": origin or "*",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Credentials": "true"
-        })
-    response = await call_next(request)
-    origin = request.headers.get("Origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-    return response
 
 # --- Session Dependencies ---
 def get_auth_session():

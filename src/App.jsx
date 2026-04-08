@@ -150,6 +150,7 @@ function AppContent() {
       <CompanyContext.Provider value={{ isAuthenticated, isMobile }}>
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/register" element={<Register />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </CompanyContext.Provider>
