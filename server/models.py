@@ -128,6 +128,7 @@ class PettyCash(SQLModel, table=True):
     requester_id: int # Loose link to Auth DB
     amount: float
     description: str = Field(default="Petty Cash Claim")
+    ledger_url: Optional[str] = None
     receipt_url: Optional[str] = None
     status: PettyCashStatus = Field(default=PettyCashStatus.SUBMITTED)
     created_at: datetime = Field(default_factory=datetime.utcnow)

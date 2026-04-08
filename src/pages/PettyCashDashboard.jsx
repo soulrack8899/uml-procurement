@@ -9,8 +9,9 @@ const PettyCashDashboard = () => {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ description: '', amount: '', receipt_ref: '' })
+  const [form, setForm] = useState({ description: '', amount: '', receipt_ref: '', ledger_url: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => { fetchData() }, [refreshKey])
 
@@ -22,20 +23,47 @@ const PettyCashDashboard = () => {
     finally { setLoading(false) }
   }
 
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const res = await procurementApi.uploadFile(file)
+      setForm(prev => ({ ...prev, ledger_url: res.url }))
+    } catch (err) {
+      alert("Upload failed: " + err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!form.ledger_url) {
+        alert("Please upload a ledger file first.")
+        return
+    }
     setSubmitting(true)
     try {
       await procurementApi.createPettyCash({
         description: form.description,
         amount: parseFloat(form.amount),
-        receipt_url: form.receipt_ref || 'N/A'
+        receipt_url: form.receipt_ref || 'N/A',
+        ledger_url: form.ledger_url
       })
       setShowForm(false)
-      setForm({ description: '', amount: '', receipt_ref: '' })
+      setForm({ description: '', amount: '', receipt_ref: '', ledger_url: '' })
       fetchData()
     } catch (err) { alert(err.message) }
     finally { setSubmitting(false) }
+  }
+
+  const handleApprove = async (e, id) => {
+    e.stopPropagation()
+    try {
+      await procurementApi.approvePettyCash(id)
+      fetchData()
+    } catch (err) { alert(err.message) }
   }
 
   const handleDisburse = async (e, id) => {
@@ -113,9 +141,20 @@ const PettyCashDashboard = () => {
                          <input type="text" value={form.receipt_ref} onChange={e => setForm({...form, receipt_ref: e.target.value})} placeholder="RC-1002" style={S.input} />
                       </div>
                    </div>
+                   <div>
+                        <label style={S.label}>Mandatory Ledger Upload</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-container-low)' }}>
+                            <input type="file" onChange={handleFileUpload} accept=".pdf,.xls,.xlsx,.doc,.docx" style={{ fontSize: '0.875rem' }} />
+                            {uploading && <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>UPLOADING...</span>}
+                            {form.ledger_url && <CheckCircle2 size={16} color="var(--primary)" />}
+                        </div>
+                        <p style={{ fontSize: '0.625rem', color: 'var(--outline)', marginTop: '0.5rem' }}>REQUIRED: PDF, XLS or DOC format</p>
+                    </div>
                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                       <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, padding: '0.75rem', background: 'transparent', border: '1px solid var(--outline)', borderRadius: 'var(--radius-sm)', fontWeight: 800 }}>CANCEL</button>
-                      <button type="submit" disabled={submitting} className="gradient-fill" style={{ flex: 1, padding: '0.75rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900 }}>{submitting ? 'PROCESSING...' : 'SUBMIT'}</button>
+                      <button type="submit" disabled={submitting || uploading || !form.ledger_url} className="gradient-fill" style={{ flex: 1, padding: '0.75rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, opacity: (submitting || uploading || !form.ledger_url) ? 0.5 : 1 }}>
+                        {submitting ? 'PROCESSING...' : (form.ledger_url ? 'SUBMIT CLAIM' : 'UPLOAD LEDGER TO ENABLE')}
+                      </button>
                    </div>
                 </form>
               )}
@@ -144,15 +183,30 @@ const PettyCashDashboard = () => {
               <motion.div key={req.id} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', padding: isMobile ? '1rem' : '1.25rem 2rem', background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(194,198,211,0.2)', gap: isMobile ? '1rem' : '2rem' }}>
                   <div style={{ flex: 1 }}>
                     <h4 style={{ fontWeight: 800, fontSize: '1.125rem', color: 'var(--primary)' }}>{req.description}</h4>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 700 }}>{new Date(req.created_at).toLocaleDateString()} • {req.receipt_url}</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--outline)', fontWeight: 700 }}>
+                        {new Date(req.created_at).toLocaleDateString()} • {req.receipt_url}
+                        {req.ledger_url && (
+                            <a href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${req.ledger_url}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '1rem', color: 'var(--primary)', textDecoration: 'underline' }}>
+                                View Ledger
+                            </a>
+                        )}
+                    </p>
                   </div>
                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: isMobile ? '100%' : 'auto', gap: '2rem' }}>
                     <p style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--primary)' }}>RM {req.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                        <span className={`chip ${getStatusChipClass(req.status)}`} style={{ fontSize: '0.625rem', fontWeight: 900 }}>{req.status}</span>
-                       {activeRole === 'MANAGER' && req.status !== 'DISBURSED' && (
+                       
+                       {/* Manager/Admin Approval */}
+                       {['MANAGER', 'ADMIN', 'GLOBAL_ADMIN'].includes(activeRole) && req.status === 'SUBMITTED' && (
+                          <button onClick={(e) => handleApprove(e, req.id)} style={{ padding: '0.5rem 1rem', background: 'var(--tertiary)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, fontSize: '0.625rem' }}>APPROVE</button>
+                       )}
+
+                       {/* Finance Disburse */}
+                       {['FINANCE', 'ADMIN', 'GLOBAL_ADMIN'].includes(activeRole) && req.status === 'APPROVED' && (
                           <button onClick={(e) => handleDisburse(e, req.id)} style={{ padding: '0.5rem 1rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 900, fontSize: '0.625rem' }}>DISBURSE</button>
                        )}
+                       
                        {!isMobile && <ChevronRight size={16} style={{ opacity: 0.2 }} />}
                     </div>
                  </div>
