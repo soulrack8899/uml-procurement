@@ -7,7 +7,7 @@ import { procurementApi } from '../services/api'
 
 const PaymentRequest = () => {
   const navigate = useNavigate()
-  const { isMobile } = useCompany()
+  const { isMobile, activeRole } = useCompany()
   const fileInputRef = useRef(null)
   const [poRequests, setPoRequests] = useState([])
   const [loadingPos, setLoadingPos] = useState(true)
@@ -72,6 +72,16 @@ const PaymentRequest = () => {
   }
 
   const selectedPO = poRequests.find(r => String(r.id) === form.poId)
+
+  if (activeRole !== 'FINANCE' && activeRole !== 'GLOBAL_ADMIN') {
+    return (
+      <div style={{ padding: '5rem', textAlign: 'center', fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-headline)', color: 'var(--error)' }}>Finance Authorization Required</h2>
+        <p style={{ color: 'var(--outline)' }}>Your current role ({activeRole?.replace('_', ' ') || 'Unknown'}) is not authorized to submit payment requests.</p>
+        <button onClick={() => navigate(-1)} style={{ padding: '0.75rem 2rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 800, cursor: 'pointer', marginTop: '1rem' }}>Return to Safety</button>
+      </div>
+    )
+  }
 
   const S = {
     label: { fontSize: '0.625rem', fontWeight: 800, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: '0.75rem' },

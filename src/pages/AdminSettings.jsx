@@ -13,6 +13,7 @@ const AdminSettings = () => {
   const [threshold, setThreshold] = useState('')
   const [pettyCashLimit, setPettyCashLimit] = useState('500.00')
   const [saving, setSaving] = useState(false)
+  const [auditLogs, setAuditLogs] = useState([])
 
   useEffect(() => {
     if (currentCompany) fetchData()
@@ -20,9 +21,13 @@ const AdminSettings = () => {
 
   const fetchData = async () => {
     try {
-      const data = await procurementApi.getSettings(currentCompany.id)
+      const [data, logs] = await Promise.all([
+        procurementApi.getSettings(currentCompany.id),
+        procurementApi.getRecentAuditLogs()
+      ])
       setSettings(data)
       setThreshold(data.approval_threshold.toLocaleString('en', { minimumFractionDigits: 2 }))
+      setAuditLogs(logs || [])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -184,19 +189,22 @@ const AdminSettings = () => {
                   </tr>
                </thead>
                <tbody>
-                  {[
-                    { time: 'Mar 29, 14:15:02', id: 'Sys_Admin_K', action: 'Modified Threshold: RM5k -> RM3k', out: 'COMMITTED' },
-                    { time: 'Mar 29, 10:22:11', id: 'Kernel_Syc', action: 'Auto-Replenish petty_cash_id_02', out: 'EXECUTED' }
-                  ].map((row, i) => (
+                  {auditLogs.length > 0 ? auditLogs.map((log, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid rgba(194,198,211,0.1)' }}>
-                       <td style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>{row.time}</td>
-                       <td style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>{row.id}</td>
-                       <td style={{ padding: '1rem', fontSize: '0.75rem' }}>{row.action}</td>
+                       <td style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: 600 }}>{new Date(log.created_at || log.timestamp).toLocaleString()}</td>
+                       <td style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>{log.user_name || log.actor || 'System'}</td>
+                       <td style={{ padding: '1rem', fontSize: '0.75rem' }}>{log.action}</td>
                        <td style={{ padding: '1rem' }}>
-                          <span style={{ fontSize: '0.5rem', fontWeight: 900, padding: '0.2rem 0.5rem', background: 'var(--primary-container)', color: 'white', borderRadius: '2px' }}>{row.out}</span>
+                          <span style={{ fontSize: '0.5rem', fontWeight: 900, padding: '0.2rem 0.5rem', background: 'var(--primary-container)', color: 'white', borderRadius: '2px' }}>{log.status || 'COMMITTED'}</span>
                        </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="4" style={{ padding: '2rem', textAlign: 'center', fontSize: '0.875rem', color: 'var(--outline)' }}>
+                         No recent audit logs found.
+                      </td>
+                    </tr>
+                  )}
                </tbody>
             </table>
          </div>

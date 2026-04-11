@@ -180,7 +180,7 @@ const RequestDetails = () => {
                 {request.quotation_url ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <a 
-                      href={request.quotation_url.startsWith('http') ? request.quotation_url : `https://uml-procurement-internal-production.up.railway.app${request.quotation_url}`} 
+                      href={request.quotation_url.startsWith('http') ? request.quotation_url : `${import.meta.env.VITE_API_URL || "http://localhost:8000"}${request.quotation_url}`} 
                       target="_blank" 
                       rel="noreferrer"
                       style={{ 
