@@ -481,7 +481,7 @@ def list_requests(
         "limit": limit
     }
 
-@app.post("/requests/", response_model=ProcurementRequest)
+@app.post("/requests/")
 def create_request(data: RequestCreate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     new_req = ProcurementRequest(**data.dict(exclude={'items'}), company_id=context['company'].id, created_by=context['user'].id, status=StatusEnum.SUBMITTED)
     new_req.items = [LineItem(**item.dict()) for item in data.items]
@@ -498,8 +498,19 @@ def create_request(data: RequestCreate, context: dict = Depends(get_active_sessi
         user_name=context['user'].name,
         user_role=context['active_role']
     ))
+    from fastapi.encoders import jsonable_encoder
     b_session.commit()
-    return new_req.dict()
+    b_session.refresh(new_req)
+    # Force explicit return to bypass SQLModel serialization quirks
+    return {
+        "id": new_req.id,
+        "title": new_req.title,
+        "vendor_name": new_req.vendor_name,
+        "vendor_id": new_req.vendor_id,
+        "total_amount": new_req.total_amount,
+        "status": new_req.status,
+        "created_at": new_req.created_at.isoformat() if new_req.created_at else None
+    }
 
 @app.get("/requests/{request_id}", response_model=ProcurementRequest)
 def get_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
@@ -513,7 +524,7 @@ class RequestUpdate(BaseModel):
     quotation_url: Optional[str] = None
     comments: Optional[str] = None
 
-@app.patch("/requests/{request_id}", response_model=ProcurementRequest)
+@app.patch("/requests/{request_id}")
 def update_request(request_id: int, data: RequestUpdate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     req = b_session.get(ProcurementRequest, request_id)
     if not req: raise HTTPException(status_code=404)
@@ -523,9 +534,10 @@ def update_request(request_id: int, data: RequestUpdate, context: dict = Depends
         setattr(req, key, value)
     req.updated_at = datetime.utcnow()
     b_session.add(req)
+    from fastapi.encoders import jsonable_encoder
     b_session.commit()
     b_session.refresh(req)
-    return req
+    return jsonable_encoder(req)
 
 @app.get("/requests/{request_id}/audit", response_model=List[AuditLog])
 def get_audit_logs(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
