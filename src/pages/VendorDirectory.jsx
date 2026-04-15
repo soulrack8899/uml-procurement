@@ -342,6 +342,7 @@ const VendorDirectory = () => {
       </div>
 
       {/* Search & Filter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem',
           background: 'var(--surface-container-low)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-pill)'
