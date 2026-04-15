@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, ArrowLeft, Upload, FileText, CheckCircle2, CloudUpload, Info, ArrowRight, X, Loader2 } from 'lucide-react'
+import { Plus, Trash2, ArrowLeft, Upload, FileText, CheckCircle2, Info, ArrowRight, X, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { procurementApi } from '../services/api'
 import { useCompany } from '../App'
@@ -9,7 +9,7 @@ const ProcurementForm = () => {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const { isMobile, currentCompany } = useCompany()
-  
+
   const [title, setTitle] = useState('')
   const [vendor, setVendor] = useState({ name: '', id: 'V-AUTO' })
   const [items, setItems] = useState([{ description: '', quantity: 1, uom: 'PCS', unitPrice: 0 }])
@@ -30,7 +30,7 @@ const ProcurementForm = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    
+
     setUploading(true)
     try {
       const result = await procurementApi.uploadFile(file)
@@ -48,15 +48,15 @@ const ProcurementForm = () => {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
     if (items.length === 0 || !items[0].description) {
-        alert("Please add at least one line item with a description.");
-        return;
+      alert("Please add at least one line item with a description.");
+      return;
     }
 
     const total = calculateTotal()
     if (total > 1000 && !quotationUrl) {
-        if (!window.confirm("Standard policy requires a quotation for spending over RM 1,000. Proceed anyway?")) {
-            return;
-        }
+      if (!window.confirm("Standard policy requires a quotation for spending over RM 1,000. Proceed anyway?")) {
+        return;
+      }
     }
 
     setSubmitting(true)
@@ -75,7 +75,7 @@ const ProcurementForm = () => {
           total_price: (parseInt(i.quantity) || 0) * (parseFloat(i.unitPrice) || 0)
         }))
       }
-      
+
       const res = await procurementApi.createRequest(requestData)
       if (res && res.id) {
         navigate(`/request/${res.id}`)
@@ -98,7 +98,7 @@ const ProcurementForm = () => {
 
   return (
     <div style={{ maxWidth: '68rem', margin: '0 auto', paddingBottom: '8rem', display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '3rem' }}>
-      
+
       {/* Header Context */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
@@ -117,31 +117,31 @@ const ProcurementForm = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '8fr 4fr', gap: isMobile ? '1.5rem' : '2.5rem', alignItems: 'start' }}>
-        
+
         <div style={S.card}>
           <div style={{ background: 'var(--surface-container-high)', padding: '1.5rem 2.5rem', borderBottom: '1px solid rgba(194,198,211,0.1)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-             <FileText size={20} style={{ color: 'var(--primary)' }} />
-             <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)' }}>Request Details</h2>
+            <FileText size={20} style={{ color: 'var(--primary)' }} />
+            <h2 style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)' }}>Request Details</h2>
           </div>
-          
+
           <form style={{ padding: isMobile ? '1.5rem' : '3rem' }}>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', marginBottom: '4rem' }}>
-               <div>
-                  <label style={S.label}>Request Title</label>
-                  <input placeholder="e.g. Q3 Laboratory Reagent Replenishment" value={title} onChange={e => setTitle(e.target.value)} style={S.input} />
-               </div>
-               
-               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2.5rem' }}>
-                  <div>
-                    <label style={S.label}>Vendor Selection</label>
-                    <input required placeholder="Start typing vendor name..." value={vendor.name} onChange={e => setVendor({...vendor, name: e.target.value})} style={S.input} />
-                  </div>
-                  <div>
-                    <label style={S.label}>Vendor ID</label>
-                    <input placeholder="V-XXXX" value={vendor.id} onChange={e => setVendor({...vendor, id: e.target.value})} style={{ ...S.input, color: 'var(--outline)' }} />
-                  </div>
-               </div>
+              <div>
+                <label style={S.label}>Request Title</label>
+                <input placeholder="e.g. Q3 Laboratory Reagent Replenishment" value={title} onChange={e => setTitle(e.target.value)} style={S.input} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2.5rem' }}>
+                <div>
+                  <label style={S.label}>Vendor Selection</label>
+                  <input required placeholder="Start typing vendor name..." value={vendor.name} onChange={e => setVendor({ ...vendor, name: e.target.value })} style={S.input} />
+                </div>
+                <div>
+                  <label style={S.label}>Vendor ID</label>
+                  <input placeholder="V-XXXX" value={vendor.id} onChange={e => setVendor({ ...vendor, id: e.target.value })} style={{ ...S.input, color: 'var(--outline)' }} />
+                </div>
+              </div>
             </div>
 
             <div style={{ marginBottom: '4rem' }}>
@@ -154,8 +154,8 @@ const ProcurementForm = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 {items.map((item, i) => (
-                  <div key={i} style={{ 
-                    display: 'grid', 
+                  <div key={i} style={{
+                    display: 'grid',
                     gridTemplateColumns: isMobile ? '1fr' : '4fr 1.5fr 1fr 1.5fr 1.5fr auto',
                     gap: isMobile ? '1.5rem' : '1.25rem', alignItems: 'end', padding: '1.5rem',
                     background: 'var(--surface-container-low)', borderRadius: 'var(--radius-md)',
@@ -192,92 +192,92 @@ const ProcurementForm = () => {
             </div>
 
             <div style={{ marginBottom: '4rem' }}>
-                <label style={S.label}>Supporting Documents</label>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
-                  <motion.div 
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => fileInputRef.current.click()}
-                    style={{ 
-                      width: '100%', padding: '1.5rem', borderRadius: 'var(--radius-lg)', 
-                      border: '2px dashed var(--primary)', background: quotationUrl ? 'var(--primary-container)' : 'var(--surface-container-low)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', cursor: 'pointer', transition: 'all 0.2s',
-                      boxShadow: '0 10px 20px rgba(0,0,0,0.05)'
-                    }}>
-                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
-                     <div style={{ 
-                        width: 56, height: 56, borderRadius: '50%', background: quotationUrl ? 'var(--primary)' : 'white',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: quotationUrl ? 'white' : 'var(--primary)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                     }}>
-                        {uploading ? (
-                           <Loader2 className="animate-spin" size={24} />
-                        ) : quotationUrl ? (
-                           <CheckCircle2 size={24} />
-                        ) : (
-                           <Plus size={24} />
-                        )}
-                     </div>
-                     <div style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>
-                           {uploading ? "Processing Document..." : quotationUrl ? "Quotation Attached" : "Add Quotation"}
-                        </p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--outline)', marginTop: '4px' }}>
-                           {quotationName || "Mandatory for spends > RM 1,000"}
-                        </p>
-                     </div>
-                  </motion.div>
-                  
-                  <div style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(194,198,211,0.1)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <Info size={16} style={{ color: 'var(--primary)' }} />
-                      <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', margin: 0 }}>Requirement</p>
-                    </div>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', margin: 0 }}>
-                      Company policy requires a supplier quotation for any expenditure over <strong>RM 1,000.00</strong>. Please attach the quotation to avoid delays.
+              <label style={S.label}>Supporting Documents</label>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2rem', alignItems: 'center' }}>
+                <motion.div
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => fileInputRef.current.click()}
+                  style={{
+                    width: '100%', padding: '1.5rem', borderRadius: 'var(--radius-lg)',
+                    border: '2px dashed var(--primary)', background: quotationUrl ? 'var(--primary-container)' : 'var(--surface-container-low)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', cursor: 'pointer', transition: 'all 0.2s',
+                    boxShadow: '0 10px 20px rgba(0,0,0,0.05)'
+                  }}>
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
+                  <div style={{
+                    width: 56, height: 56, borderRadius: '50%', background: quotationUrl ? 'var(--primary)' : 'white',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: quotationUrl ? 'white' : 'var(--primary)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}>
+                    {uploading ? (
+                      <Loader2 className="animate-spin" size={24} />
+                    ) : quotationUrl ? (
+                      <CheckCircle2 size={24} />
+                    ) : (
+                      <Plus size={24} />
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>
+                      {uploading ? "Processing Document..." : quotationUrl ? "Quotation Attached" : "Add Quotation"}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--outline)', marginTop: '4px' }}>
+                      {quotationName || "Mandatory for spends > RM 1,000"}
                     </p>
                   </div>
+                </motion.div>
+
+                <div style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(194,198,211,0.1)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <Info size={16} style={{ color: 'var(--primary)' }} />
+                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase', margin: 0 }}>Requirement</p>
+                  </div>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', margin: 0 }}>
+                    Company policy requires a supplier quotation for any expenditure over <strong>RM 1,000.00</strong>. Please attach the quotation to avoid delays.
+                  </p>
                 </div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'flex-end', alignItems: 'center', gap: '2rem', paddingTop: '3rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
-               <div style={{ display: 'flex', gap: '1.5rem', width: isMobile ? '100%' : 'auto' }}>
-                  <button type="button" style={{ padding: '1rem 2rem', background: 'transparent', border: 'none', color: 'var(--outline)', fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={submitting || uploading}
-                    className="gradient-fill"
-                    style={{
-                      padding: '1rem 3rem', color: 'white', fontWeight: 900, textTransform: 'uppercase', borderRadius: 'var(--radius-pill)', border: 'none', cursor: 'pointer', 
-                      display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(14, 77, 81, 0.2)', opacity: (submitting || uploading) ? 0.6 : 1
-                    }}
-                  >
-                    {submitting ? 'Processing...' : <>Submit Request <ArrowRight size={20}/></>}
-                  </button>
-               </div>
+              <div style={{ display: 'flex', gap: '1.5rem', width: isMobile ? '100%' : 'auto' }}>
+                <button type="button" style={{ padding: '1rem 2rem', background: 'transparent', border: 'none', color: 'var(--outline)', fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting || uploading}
+                  className="gradient-fill"
+                  style={{
+                    padding: '1rem 3rem', color: 'white', fontWeight: 900, textTransform: 'uppercase', borderRadius: 'var(--radius-pill)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(14, 77, 81, 0.2)', opacity: (submitting || uploading) ? 0.6 : 1
+                  }}
+                >
+                  {submitting ? 'Processing...' : <>Submit Request <ArrowRight size={20} /></>}
+                </button>
+              </div>
             </div>
           </form>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-           <div style={{ ...S.card, padding: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
-                 <Info size={20} style={{ color: 'var(--primary)' }} />
-                 <h4 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase' }}>Approval Rules</h4>
-              </div>
-              <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                 <li>Requests over <strong>RM 5,000.00</strong> will be sent to the <strong>Manager</strong> for review.</li>
-                 <li>All actions are recorded in the system audit log for security.</li>
-                 <li>Ensure UOM (Unit of Measure) is clearly specified for physical goods.</li>
-              </ul>
-           </div>
+          <div style={{ ...S.card, padding: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.5rem' }}>
+              <Info size={20} style={{ color: 'var(--primary)' }} />
+              <h4 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase' }}>Approval Rules</h4>
+            </div>
+            <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <li>Requests over <strong>RM 5,000.00</strong> will be sent to the <strong>Manager</strong> for review.</li>
+              <li>All actions are recorded in the system audit log for security.</li>
+              <li>Ensure UOM (Unit of Measure) is clearly specified for physical goods.</li>
+            </ul>
+          </div>
 
-           <div style={{ background: 'var(--primary)', color: 'white', padding: '2rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 20px 40px rgba(14, 77, 81, 0.15)' }}>
-              <p style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8, marginBottom: '0.5rem' }}>System Status</p>
-              <h5 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>System Status: Online</h5>
-              <p style={{ fontSize: '0.75rem', marginTop: '1rem', opacity: 0.9 }}>Your request will be visible to the {currentCompany?.name} finance division immediately upon submission.</p>
-           </div>
+          <div style={{ background: 'var(--primary)', color: 'white', padding: '2rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 20px 40px rgba(14, 77, 81, 0.15)' }}>
+            <p style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8, marginBottom: '0.5rem' }}>System Status</p>
+            <h5 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>System Status: Online</h5>
+            <p style={{ fontSize: '0.75rem', marginTop: '1rem', opacity: 0.9 }}>Your request will be visible to the {currentCompany?.name} finance division immediately upon submission.</p>
+          </div>
         </div>
 
       </div>

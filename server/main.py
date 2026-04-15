@@ -456,38 +456,57 @@ def update_request(request_id: int, data: RequestUpdate, context: dict = Depends
 def get_audit_logs(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     return b_session.exec(select(AuditLog).where(AuditLog.request_id == request_id)).all()
 
+class TransitionRequest(BaseModel):
+    action: Optional[str] = "Transition"
+
 @app.post("/requests/{request_id}/transition")
-def transition_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+def transition_request(request_id: int, data: TransitionRequest, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     req = b_session.get(ProcurementRequest, request_id)
     if not req: raise HTTPException(status_code=404)
-    
+
     old_status = req.status
     settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == req.company_id)).first()
     threshold = settings.approval_threshold if settings else 5000.0
-    
+
+    # Support explicit rejection
+    if data.action and "reject" in data.action.lower():
+        req.status = StatusEnum.DRAFT
+        b_session.add(req)
+        b_session.add(AuditLog(
+            company_id=req.company_id,
+            request_id=req.id,
+            action="Request Rejected",
+            from_status=old_status,
+            to_status=req.status,
+            user_name=context['user'].name,
+            user_role=context['active_role']
+        ))
+        b_session.commit()
+        return {"status": "ok", "new_status": req.status}
+
     # Workflow Transitions
     if req.status == StatusEnum.SUBMITTED:
         if req.total_amount > threshold:
             req.status = StatusEnum.PENDING_DIRECTOR
         else:
             req.status = StatusEnum.PENDING_MANAGER
-    
+
     elif req.status == StatusEnum.PENDING_MANAGER:
         # Assuming manager approved
         if req.total_amount > threshold:
             req.status = StatusEnum.PENDING_DIRECTOR
         else:
             req.status = StatusEnum.APPROVED
-            
+
     elif req.status == StatusEnum.PENDING_DIRECTOR:
         req.status = StatusEnum.APPROVED
-        
+
     elif req.status == StatusEnum.APPROVED:
         req.status = StatusEnum.PO_ISSUED
-        
+
     elif req.status == StatusEnum.PO_ISSUED:
         req.status = StatusEnum.PAYMENT_PENDING
-        
+
     elif req.status == StatusEnum.PAYMENT_PENDING:
         req.status = StatusEnum.PAID
 
@@ -496,13 +515,21 @@ def transition_request(request_id: int, context: dict = Depends(get_active_sessi
     b_session.add(AuditLog(
         company_id=req.company_id,
         request_id=req.id,
-        action="Transition Workflow",
+        action=data.action or "Transition Workflow",
         from_status=old_status,
         to_status=req.status,
         user_name=context['user'].name,
         user_role=context['active_role']
     ))
     b_session.commit()
+
+    # Send email notifications on approval
+    if req.status == StatusEnum.APPROVED and old_status != StatusEnum.APPROVED:
+        # Notify the requester
+        requester = auth_session.get(User, req.created_by)
+        if requester:
+            send_approval_email(requester.email, requester.name)
+
     return {"status": "ok", "new_status": req.status}
 
 @app.get("/requests/{request_id}/generate-po")

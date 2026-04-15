@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const getHeaders = () => {
-  const companyId = localStorage.getItem("currentCompanyId") || "1"; 
+  const companyId = localStorage.getItem("currentCompanyId") || "1";
   const token = localStorage.getItem("accessToken");
   const headers = {
     "Content-Type": "application/json",
@@ -29,13 +29,13 @@ export const procurementApi = {
     if (!response.ok) throw new Error("Failed to fetch companies");
     return response.json();
   },
-  
+
   getPublicCompanies: async () => {
     const response = await fetch(`${API_BASE_URL}/companies/public`);
     if (!response.ok) throw new Error("Failed to fetch public companies");
     return response.json();
   },
-  
+
   onboardCompany: async (data) => {
     const response = await fetch(`${API_BASE_URL}/companies/onboard`, {
       method: "POST",
@@ -74,14 +74,14 @@ export const procurementApi = {
     if (!response.ok) throw new Error("Update failed");
     return response.json();
   },
-  
+
   // --- Procurement ---
   getRequests: async () => {
     const response = await fetch(`${API_BASE_URL}/requests/`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Unauthorized/Forbidden Context");
     return response.json();
   },
-  
+
   getRequest: async (id) => {
     const response = await fetch(`${API_BASE_URL}/requests/${id}`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Request not found in this tenant.");
@@ -98,7 +98,7 @@ export const procurementApi = {
     if (!response.ok) throw new Error("Failed to generate PO");
     return response.blob();
   },
-  
+
   updateRequest: async (id, data) => {
     const response = await fetch(`${API_BASE_URL}/requests/${id}`, {
       method: "PATCH",
@@ -108,7 +108,7 @@ export const procurementApi = {
     if (!response.ok) throw new Error("Update failed");
     return response.json();
   },
-  
+
   createRequest: async (data) => {
     const response = await fetch(`${API_BASE_URL}/requests/`, {
       method: "POST",
@@ -121,11 +121,12 @@ export const procurementApi = {
     }
     return response.json();
   },
-  
-  transitionStatus: async (requestId) => {
+
+  transitionStatus: async (requestId, action) => {
     const response = await fetch(`${API_BASE_URL}/requests/${requestId}/transition`, {
       method: "POST",
       headers: getHeaders(),
+      body: JSON.stringify({ action: action || "Transition" }),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -200,8 +201,8 @@ export const procurementApi = {
       body: JSON.stringify({ email, password }),
     });
     if (!response.ok) {
-       const error = await response.json();
-       throw new Error(error.detail || "Authentication Failed");
+      const error = await response.json();
+      throw new Error(error.detail || "Authentication Failed");
     }
     const data = await response.json();
     if (data.access_token) {
@@ -217,8 +218,8 @@ export const procurementApi = {
       body: JSON.stringify(userData),
     });
     if (!response.ok) {
-       const error = await response.json();
-       throw new Error(error.detail || "Registration Failed");
+      const error = await response.json();
+      throw new Error(error.detail || "Registration Failed");
     }
     return response.json();
   },
@@ -230,8 +231,8 @@ export const procurementApi = {
       body: JSON.stringify(data),
     });
     if (!response.ok) {
-       const error = await response.json();
-       throw new Error(error.detail || "User Creation Failed");
+      const error = await response.json();
+      throw new Error(error.detail || "User Creation Failed");
     }
     return response.json();
   },
@@ -265,7 +266,7 @@ export const procurementApi = {
   uploadFile: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    
+
     const response = await fetch(`${API_BASE_URL}/upload/`, {
       method: "POST",
       body: formData,

@@ -31,10 +31,10 @@ const RequestDetails = () => {
     finally { setLoading(false) }
   }
 
-  const handleTransition = async (newStatus, action, role) => {
+  const handleTransition = async (action, newStatus) => {
     setTransitioning(newStatus)
     try {
-      await procurementApi.transitionStatus(id)
+      await procurementApi.transitionStatus(id, action)
       fetchData()
     } catch (err) { alert(err.message) }
     finally { setTransitioning(null) }
@@ -43,7 +43,7 @@ const RequestDetails = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    
+
     setUploading(true)
     try {
       const result = await procurementApi.uploadFile(file)
@@ -109,10 +109,10 @@ const RequestDetails = () => {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', gap: isMobile ? '1.5rem' : '2.5rem' }}>
-        
+
         {/* Main Details Panel */}
         <div style={{ gridColumn: isMobile ? 'auto' : 'span 8', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
+
           <div className="surface-card" style={{ padding: isMobile ? '1.5rem' : '2.5rem' }}>
             <div style={{ marginBottom: '2.5rem' }}>
               <p style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>Total Amount</p>
@@ -141,8 +141,8 @@ const RequestDetails = () => {
                   <h4 style={{ fontWeight: 800, color: 'var(--on-secondary-container)' }}>Document Ready for PO</h4>
                 </div>
                 <p style={{ fontSize: '0.875rem', color: 'var(--on-secondary-container)', opacity: 0.8, marginBottom: '2rem' }}>Generation will include company digital signatures.</p>
-                <button onClick={() => handleTransition('PO_ISSUED', 'Generated PO', activeRole)} className="gradient-fill" style={{ width: '100%', padding: '1rem', color: 'white', borderRadius: 'var(--radius-lg)', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
-                   Generate & Issue Purchase Order
+                <button onClick={() => handleTransition('Generated PO', 'PO_ISSUED')} className="gradient-fill" style={{ width: '100%', padding: '1rem', color: 'white', borderRadius: 'var(--radius-lg)', border: 'none', fontWeight: 900, cursor: 'pointer' }}>
+                  Generate & Issue Purchase Order
                 </button>
               </div>
             )}
@@ -156,91 +156,91 @@ const RequestDetails = () => {
 
         {/* Sidebar Panel */}
         <div style={{ gridColumn: isMobile ? 'auto' : 'span 4', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
+
           {canApprove(request.status, activeRole) && (
             <div className="surface-card" style={{ padding: '1.75rem', background: 'var(--surface-container-high)' }}>
-               <h4 style={{ fontWeight: 800, marginBottom: '1rem' }}>Review Request</h4>
-               <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '1.5rem' }}>Review all attached quotations before final approval.</p>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <button onClick={() => handleTransition(getNextStatus(request.status), 'Approved', activeRole)} className="gradient-fill" style={{ padding: '0.875rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 800, cursor: 'pointer' }}>
-                    Approve Request
-                  </button>
-                  <button onClick={() => handleTransition('DRAFT', 'Rejected', activeRole)} style={{ padding: '0.875rem', color: 'var(--error)', background: 'var(--error-container)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 800, cursor: 'pointer' }}>
-                    Reject & Return
-                  </button>
-               </div>
+              <h4 style={{ fontWeight: 800, marginBottom: '1rem' }}>Review Request</h4>
+              <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '1.5rem' }}>Review all attached quotations before final approval.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button onClick={() => handleTransition('Approved', getNextStatus(request.status))} className="gradient-fill" style={{ padding: '0.875rem', color: 'white', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 800, cursor: 'pointer' }}>
+                  Approve Request
+                </button>
+                <button onClick={() => handleTransition('Rejected', 'DRAFT')} style={{ padding: '0.875rem', color: 'var(--error)', background: 'var(--error-container)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 800, cursor: 'pointer' }}>
+                  Reject & Return
+                </button>
+              </div>
             </div>
           )}
 
           <div className="surface-card" style={{ padding: '1.75rem' }}>
-             <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Attachments & Quotations</h4>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
-                
-                {request.quotation_url ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <a 
-                      href={request.quotation_url.startsWith('http') ? request.quotation_url : `${import.meta.env.VITE_API_URL || "http://localhost:8000"}${request.quotation_url}`} 
-                      target="_blank" 
-                      rel="noreferrer"
-                      style={{ 
-                        display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', 
-                        background: 'var(--secondary-container)', color: 'var(--on-secondary-container)', 
-                        borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 800, fontSize: '0.875rem' 
-                      }}
-                    >
-                      <FileText size={18} />
-                      View Supplier Quotation
-                      <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
-                    </a>
-                    <button 
-                      onClick={() => fileInputRef.current.click()}
-                      disabled={uploading}
-                      style={{ 
-                        fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)', 
-                        background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                        padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px'
-                      }}
-                    >
-                      {uploading ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                      Replace Document
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => fileInputRef.current.click()}
-                    disabled={uploading}
-                    style={{ 
-                      width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', 
-                      padding: '1rem', background: 'var(--surface-container-low)', 
-                      borderRadius: 'var(--radius-sm)', border: '2px dashed var(--outline-variant)',
-                      color: 'var(--primary)', cursor: 'pointer', textAlign: 'left',
-                      transition: 'all 0.2s'
+            <h4 style={{ fontWeight: 800, marginBottom: '1.25rem' }}>Attachments & Quotations</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} style={{ display: 'none' }} accept=".pdf,image/*" />
+
+              {request.quotation_url ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <a
+                    href={request.quotation_url.startsWith('http') ? request.quotation_url : `${import.meta.env.VITE_API_URL || "http://localhost:8000"}${request.quotation_url}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem',
+                      background: 'var(--secondary-container)', color: 'var(--on-secondary-container)',
+                      borderRadius: 'var(--radius-sm)', textDecoration: 'none', fontWeight: 800, fontSize: '0.875rem'
                     }}
                   >
-                    {uploading ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <Plus size={18} />
-                    )}
-                    <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>
-                      {uploading ? "Uploading..." : "Add Quotation Document"}
-                    </span>
+                    <FileText size={18} />
+                    View Supplier Quotation
+                    <ExternalLink size={14} style={{ marginLeft: 'auto' }} />
+                  </a>
+                  <button
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={uploading}
+                    style={{
+                      fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)',
+                      background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+                      padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px'
+                    }}
+                  >
+                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                    Replace Document
                   </button>
-                )}
-                
-                {request.status === 'PO_ISSUED' && (
-                  <button onClick={async () => {
-                     const blob = await procurementApi.generatePO(id)
-                     const url = URL.createObjectURL(blob)
-                     const a = document.createElement('a')
-                     a.href = url; a.download = `PO-${id}.pdf`; a.click()
-                  }} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--primary-fixed)', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 800 }}>
-                    <Download size={18} />
-                    <span style={{ fontSize: '0.875rem' }}>Final Purchase Order</span>
-                  </button>
-                )}
-             </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current.click()}
+                  disabled={uploading}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '1rem', background: 'var(--surface-container-low)',
+                    borderRadius: 'var(--radius-sm)', border: '2px dashed var(--outline-variant)',
+                    color: 'var(--primary)', cursor: 'pointer', textAlign: 'left',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {uploading ? (
+                    <Loader2 className="animate-spin" size={18} />
+                  ) : (
+                    <Plus size={18} />
+                  )}
+                  <span style={{ fontSize: '0.875rem', fontWeight: 700 }}>
+                    {uploading ? "Uploading..." : "Add Quotation Document"}
+                  </span>
+                </button>
+              )}
+
+              {request.status === 'PO_ISSUED' && (
+                <button onClick={async () => {
+                  const blob = await procurementApi.generatePO(id)
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = `PO-${id}.pdf`; a.click()
+                }} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--primary-fixed)', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 800 }}>
+                  <Download size={18} />
+                  <span style={{ fontSize: '0.875rem' }}>Final Purchase Order</span>
+                </button>
+              )}
+            </div>
           </div>
 
         </div>
