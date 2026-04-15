@@ -47,7 +47,7 @@ const Dashboard = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '3rem', paddingBottom: '4rem' }}>
 
       {/* Welcome & Onboarding Guide */}
-      <WelcomeGuide activeRole={activeRole} isMobile={isMobile} />
+      <WelcomeGuide activeRole={activeRole} isMobile={isMobile} threshold={stats.threshold} />
 
       {/* Performance Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
@@ -204,7 +204,7 @@ const ActivityItem = ({ time, title, detail, active }) => (
   </div>
 );
 
-const WelcomeGuide = ({ activeRole, isMobile }) => {
+const WelcomeGuide = ({ activeRole, isMobile, threshold }) => {
   const guideKey = `guideDismissed_${activeRole}`
   const [dismissed, setDismissed] = useState(localStorage.getItem(guideKey) === 'true')
   if (dismissed) return null;
@@ -222,7 +222,7 @@ const WelcomeGuide = ({ activeRole, isMobile }) => {
     },
     DIRECTOR: {
       title: "Executive Approval",
-      desc: "You are responsible for high-value strategic spend. Your approval is required for all orders exceeding company thresholds (e.g., > RM 5,000).",
+      desc: `You are responsible for high-value strategic spend. Your approval is required for all orders exceeding company thresholds (e.g., > RM ${threshold?.toLocaleString()}).`,
       steps: ["Review high-value requests", "Authorized overrides", "Executive expenditure trends"]
     },
     MANAGER: {

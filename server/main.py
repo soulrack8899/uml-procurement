@@ -1022,13 +1022,17 @@ def get_dashboard_stats(context: dict = Depends(get_active_session_context), b_s
     completed = len([r for r in requests if r.status in [StatusEnum.APPROVED, StatusEnum.PO_ISSUED, StatusEnum.PAID]])
     total_spend = sum([r.total_amount for r in requests if r.status in [StatusEnum.APPROVED, StatusEnum.PO_ISSUED, StatusEnum.PAID]])
     
+    # Fetch company threshold
+    settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == cid)).first()
+    display_threshold = settings.approval_threshold if settings else 5000.0
+
     return {
         "pending": pending,
         "completed": completed,
         "total_spend": total_spend,
         "vendors": len(vendors),
         "claims": len(claims),
-        "threshold": 5000.0 # Standard threshold for display
+        "threshold": display_threshold
     }
 
 @app.get("/audit/recent", response_model=List[AuditLog])
