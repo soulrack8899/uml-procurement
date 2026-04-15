@@ -128,6 +128,22 @@ const VendorDirectory = () => {
     }
   }
 
+  const exportVendors = () => {
+    const headers = ['Name', 'Type', 'Location', 'City', 'State', 'Contact', 'Rating'];
+    const rows = filteredVendors.map(v => [
+      v.name, v.vendor_type, v.location, v.city, v.state, v.contact, v.rating
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `vendor_directory_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   const filteredVendors = vendors.filter(v => {
     const q = searchQuery.toLowerCase()
     if (!q) return true
@@ -326,11 +342,6 @@ const VendorDirectory = () => {
       </div>
 
       {/* Search & Filter */}
-      <div style={{
-        background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-sm)',
-        padding: '1rem', border: '1px solid rgba(194,198,211,0.2)',
-        display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: '1rem'
-      }}>
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem',
           background: 'var(--surface-container-low)', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-pill)'
@@ -341,6 +352,9 @@ const VendorDirectory = () => {
             onChange={e => setSearchQuery(e.target.value)}
             style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: 'var(--font-body)', fontSize: '0.875rem', width: '100%' }} />
         </div>
+        <button onClick={exportVendors} style={{ padding: '0.75rem 1.5rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-pill)', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+             <Globe size={16} /> Export CSV
+        </button>
       </div>
 
       {/* Vendor Grid */}

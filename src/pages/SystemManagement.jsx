@@ -68,6 +68,16 @@ const SystemManagement = () => {
     }
   };
 
+  const exportCSV = () => {
+    const headers = ['Name', 'Email', 'Role', 'Status'];
+    const rows = filteredUsers.map(u => [u.name, u.email, u.global_role, u.approval_status]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", "user_export.csv");
+    link.click();
+  }
+
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = filterRole === 'ALL' || u.global_role === filterRole;
@@ -141,6 +151,9 @@ const SystemManagement = () => {
                 />
              </div>
              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 800 }}>
+                    <Globe size={16} /> Export CSV
+                </button>
                 <span style={{ fontSize: '0.625rem', color: 'var(--outline)', fontWeight: 800 }}>SYNCED: {lastUpdated}</span>
                 <button onClick={fetchData} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer' }}><RefreshCw size={20} className={loading ? 'animate-spin' : ''} /></button>
              </div>

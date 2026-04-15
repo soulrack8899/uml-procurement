@@ -259,9 +259,16 @@ def on_startup():
             a_session.add(master)
             a_session.commit()
         else:
-            # Only update role to ensure they remain Global Admin, but DON'T reset password
+            # Ensure they remain Global Admin and are APPROVED
+            needs_update = False
             if master.global_role != UserRole.GLOBAL_ADMIN:
                 master.global_role = UserRole.GLOBAL_ADMIN
+                needs_update = True
+            if master.approval_status != "APPROVED":
+                master.approval_status = "APPROVED"
+                needs_update = True
+            
+            if needs_update:
                 a_session.add(master)
                 a_session.commit()
 
@@ -554,6 +561,7 @@ def transition_request(request_id: int, data: TransitionRequest = None, context:
     # Support explicit rejection
     if action_text and "reject" in action_text.lower():
         req.status = StatusEnum.DRAFT
+        req.rejection_reason = notes_text
         b_session.add(req)
         b_session.add(AuditLog(
             company_id=req.company_id,

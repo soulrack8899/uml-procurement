@@ -92,6 +92,7 @@ class ProcurementRequest(SQLModel, table=True):
     status: StatusEnum = Field(default=StatusEnum.DRAFT)
     quotation_url: Optional[str] = None
     comments: Optional[str] = None
+    rejection_reason: Optional[str] = None
     created_by: Optional[int] = Field(default=None) # Loose link to Auth DB
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

@@ -25,7 +25,7 @@ const Dashboard = () => {
         procurementApi.getDashboardStats(),
         procurementApi.getRecentAuditLogs()
       ])
-      
+
       // Filter requests if role is REQUESTER
       if (activeRole === 'REQUESTER') {
         const myUserId = parseInt(localStorage.getItem("currentUserId") || "1")
@@ -33,7 +33,7 @@ const Dashboard = () => {
       } else {
         setRequests(reqData)
       }
-      
+
       setStats(statsData)
       setAuditLogs(logsData)
     } catch (err) {
@@ -45,16 +45,20 @@ const Dashboard = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '3rem', paddingBottom: '4rem' }}>
-      
+
       {/* Welcome & Onboarding Guide */}
       <WelcomeGuide activeRole={activeRole} isMobile={isMobile} />
 
       {/* Performance Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-        
-        <StatsCard label="Pending Approval" count={stats.pending} color="var(--secondary)" />
-        <StatsCard label="Active Vendors" count={stats.vendors} color="var(--tertiary)" />
-        
+
+        <StatsCard
+          label={activeRole === 'REQUESTER' ? 'My Active Requests' : 'Pending Authorization'}
+          count={activeRole === 'REQUESTER' ? requests.filter(r => ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR'].includes(r.status)).length : stats.pending}
+          color="var(--secondary)"
+        />
+        <StatsCard label="Verified Vendors" count={stats.vendors} color="var(--tertiary)" />
+
         <div className="gradient-fill" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, borderRadius: 'var(--radius-xl)', color: 'white', boxShadow: '0 20px 40px rgba(0,77,81,0.15)' }}>
           <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>Total Approved Spend</span>
           <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
@@ -73,13 +77,13 @@ const Dashboard = () => {
 
       {/* Main Content Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', gap: isMobile ? '1.5rem' : '2.5rem' }}>
-        
+
         {/* Recent Requests */}
         <div style={{ gridColumn: isMobile ? 'auto' : 'span 8', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--on-surface)', letterSpacing: '-0.02em' }}>Recent Activity</h3>
-            <button 
-              onClick={fetchData} 
+            <button
+              onClick={fetchData}
               style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
               Refresh <ArrowRight size={16} />
@@ -105,12 +109,12 @@ const Dashboard = () => {
               {auditLogs.length === 0 ? (
                 <div style={{ color: 'var(--outline)', fontSize: '0.875rem', textAlign: 'center', marginTop: '2rem' }}>No recent operations.</div>
               ) : auditLogs.slice(0, 5).map((log, i) => (
-                <ActivityItem 
-                  key={log.id} 
-                  time={new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 
-                  title={log.action} 
+                <ActivityItem
+                  key={log.id}
+                  time={new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  title={log.action}
                   detail={`${log.user_name} (${log.user_role})`}
-                  active={i === 0} 
+                  active={i === 0}
                 />
               ))}
             </div>
@@ -118,14 +122,10 @@ const Dashboard = () => {
 
           <div style={{ background: 'var(--primary-fixed)', padding: '2rem', borderRadius: 'var(--radius-xl)', position: 'relative', overflow: 'hidden' }}>
             <ShieldCheck size={120} style={{ position: 'absolute', right: -20, bottom: -20, opacity: 0.1, color: 'var(--primary)' }} />
-            <h4 style={{ fontFamily: 'var(--font-bold)', fontSize: '1.25rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Approval Policy</h4>
-            <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-               Orders exceeding <strong>RM {stats.threshold?.toLocaleString()}</strong> require Executive Director approval.
+            <h4 style={{ fontFamily: 'var(--font-headline)', fontSize: '1.25rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Approval Policy</h4>
+            <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', lineHeight: 1.6 }}>
+              Orders exceeding <strong>RM {stats.threshold?.toLocaleString() || '5,000'}</strong> require Director-level approval.
             </p>
-            <div style={{ height: 6, background: 'rgba(14,77,81,0.1)', borderRadius: 'var(--radius-pill)', overflow: 'hidden' }}>
-                <div style={{ width: '65%', height: '100%', background: 'var(--primary)', borderRadius: 'inherit' }} />
-            </div>
-            <p style={{ fontSize: '0.625rem', marginTop: '0.75rem', color: 'var(--outline)', fontWeight: 800, textTransform: 'uppercase' }}>Utilization: 65% of monthly target</p>
           </div>
         </div>
       </div>
@@ -136,16 +136,9 @@ const Dashboard = () => {
 const StatsCard = ({ label, count, color }) => (
   <div className="surface-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, borderLeft: `6px solid ${color}` }}>
     <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', fontWeight: 800 }}>{label}</span>
-    <div style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'baseline', gap: '1.5rem' }}>
-      <div>
+    <div style={{ marginTop: '1.5rem' }}>
         <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>{count.toString().padStart(2, '0')}</p>
-        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Active Volume</p>
-      </div>
-      <div style={{ width: 1, height: 40, background: 'var(--outline-variant)' }} />
-      <div>
-        <p style={{ fontFamily: 'var(--font-headline)', fontSize: '3.5rem', fontWeight: 900, color: color, letterSpacing: '-0.04em', lineHeight: 1 }}>--</p>
-        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Trend</p>
-      </div>
+        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginTop: '0.5rem' }}>Real-time Count</p>
     </div>
   </div>
 );
@@ -153,14 +146,14 @@ const StatsCard = ({ label, count, color }) => (
 const RequestRow = ({ req, idx, isMobile, onClick }) => {
   const isPayment = req.title.toLowerCase().includes('payment');
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.05 }}
       onClick={onClick}
       className="surface-card hover-lift"
-      style={{ 
-        padding: isMobile ? '1.25rem' : '1.5rem', 
+      style={{
+        padding: isMobile ? '1.25rem' : '1.5rem',
         borderLeft: `4px solid ${isPayment ? 'var(--secondary)' : 'var(--primary)'}`,
         cursor: 'pointer'
       }}
@@ -169,7 +162,7 @@ const RequestRow = ({ req, idx, isMobile, onClick }) => {
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', items: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', background: isPayment ? 'var(--secondary-container)' : 'var(--primary-fixed)', color: isPayment ? 'var(--on-secondary-container)' : 'var(--primary)', padding: '2px 8px', borderRadius: '4px' }}>
-               {isPayment ? 'Payment' : 'Procure'}
+              {isPayment ? 'Payment' : 'Procure'}
             </span>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--outline)' }}>#{req.id}</span>
           </div>
@@ -189,8 +182,8 @@ const RequestRow = ({ req, idx, isMobile, onClick }) => {
           </div>
         </div>
         <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
-           <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)' }}>RM {req.total_amount.toLocaleString()}</p>
-           <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{new Date(req.created_at).toLocaleDateString()}</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--primary)' }}>RM {req.total_amount.toLocaleString()}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{new Date(req.created_at).toLocaleDateString()}</p>
         </div>
       </div>
     </motion.div>
@@ -212,7 +205,8 @@ const ActivityItem = ({ time, title, detail, active }) => (
 );
 
 const WelcomeGuide = ({ activeRole, isMobile }) => {
-  const [dismissed, setDismissed] = useState(localStorage.getItem('guideDismissed') === 'true')
+  const guideKey = `guideDismissed_${activeRole}`
+  const [dismissed, setDismissed] = useState(localStorage.getItem(guideKey) === 'true')
   if (dismissed) return null;
 
   const roleGuides = {
@@ -246,12 +240,12 @@ const WelcomeGuide = ({ activeRole, isMobile }) => {
   const guide = roleGuides[activeRole] || roleGuides.REQUESTER;
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: -20 }} 
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{ 
-        background: 'var(--surface-container-high)', border: '1px solid rgba(194,198,211,0.2)', 
-        borderRadius: 'var(--radius-xl)', padding: '2.5rem', 
+      style={{
+        background: 'var(--surface-container-high)', border: '1px solid rgba(194,198,211,0.2)',
+        borderRadius: 'var(--radius-xl)', padding: '2.5rem',
         position: 'relative', overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.05)'
       }}
@@ -263,32 +257,32 @@ const WelcomeGuide = ({ activeRole, isMobile }) => {
             Welcome to ProcuSure • {guide.title}
           </h2>
         </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', gap: '2rem' }}>
-           <div style={{ gridColumn: isMobile ? 'auto' : 'span 7' }}>
-             <p style={{ fontSize: '0.925rem', color: 'var(--on-surface-variant)', lineHeight: 1.6, marginBottom: '1.5rem' }}>{guide.desc}</p>
-             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                {guide.steps.map((step, idx) => (
-                  <div key={idx} style={{ padding: '0.5rem 1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant-low)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    <CheckCircle2 size={14} /> {step}
-                  </div>
-                ))}
-             </div>
-           </div>
 
-           <div style={{ gridColumn: isMobile ? 'auto' : 'span 5', borderLeft: isMobile ? 'none' : '1px solid var(--outline-variant-low)', paddingLeft: isMobile ? 0 : '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--outline)', letterSpacing: '0.1em' }}>Approval Workflow</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                 <FlowStep active icon={<FileText size={14}/>} label="Submission" />
-                 <FlowStep active icon={<Gavel size={14}/>} label="Management Review" />
-                 <FlowStep icon={<Banknote size={14}/>} label="Finance / PO Generation" />
-                 <FlowStep icon={<CheckCircle2 size={14}/>} label="Payment Distribution" />
-              </div>
-           </div>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(12, 1fr)', gap: '2rem' }}>
+          <div style={{ gridColumn: isMobile ? 'auto' : 'span 7' }}>
+            <p style={{ fontSize: '0.925rem', color: 'var(--on-surface-variant)', lineHeight: 1.6, marginBottom: '1.5rem' }}>{guide.desc}</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+              {guide.steps.map((step, idx) => (
+                <div key={idx} style={{ padding: '0.5rem 1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant-low)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>
+                  <CheckCircle2 size={14} /> {step}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ gridColumn: isMobile ? 'auto' : 'span 5', borderLeft: isMobile ? 'none' : '1px solid var(--outline-variant-low)', paddingLeft: isMobile ? 0 : '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h4 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--outline)', letterSpacing: '0.1em' }}>Approval Workflow</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <FlowStep active icon={<FileText size={14} />} label="Submission" />
+              <FlowStep active icon={<Gavel size={14} />} label="Management Review" />
+              <FlowStep icon={<Banknote size={14} />} label="Finance / PO Generation" />
+              <FlowStep icon={<CheckCircle2 size={14} />} label="Payment Distribution" />
+            </div>
+          </div>
         </div>
       </div>
 
-      <button onClick={() => { localStorage.setItem('guideDismissed', 'true'); setDismissed(true); }} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', border: 'none', background: 'none', color: 'var(--outline)', cursor: 'pointer', fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <button onClick={() => { localStorage.setItem(guideKey, 'true'); setDismissed(true); }} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', border: 'none', background: 'none', color: 'var(--outline)', cursor: 'pointer', fontFamily: 'var(--font-label)', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '4px' }}>
         Dismiss Guide <ArrowRight size={14} />
       </button>
     </motion.div>
@@ -297,10 +291,10 @@ const WelcomeGuide = ({ activeRole, isMobile }) => {
 
 const FlowStep = ({ active, icon, label }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: active ? 1 : 0.4 }}>
-     <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-pill)', background: active ? 'var(--primary)' : 'var(--outline-variant-low)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: active ? 'white' : 'var(--outline)' }}>{icon}</div>
-     <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: active ? 'var(--primary)' : 'var(--outline)' }}>{label}</span>
-     </div>
+    <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-pill)', background: active ? 'var(--primary)' : 'var(--outline-variant-low)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: active ? 'white' : 'var(--outline)' }}>{icon}</div>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <span style={{ fontSize: '0.75rem', fontWeight: 800, color: active ? 'var(--primary)' : 'var(--outline)' }}>{label}</span>
+    </div>
   </div>
 )
 

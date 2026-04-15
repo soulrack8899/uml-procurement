@@ -18,24 +18,25 @@ const ApprovalView = () => {
       // Filter for requests that the current role can actually act on
       const pending = data.filter(r => {
         if (!activeRole) return false
-        // Manager can act on: SUBMITTED, PENDING_MANAGER
-        if (activeRole === 'MANAGER') {
+        
+        // Use clean role strings
+        const role = activeRole.toUpperCase()
+        
+        if (role === 'MANAGER') {
           return ['SUBMITTED', 'PENDING_MANAGER'].includes(r.status)
         }
-        // Director can act on: SUBMITTED, PENDING_MANAGER, PENDING_DIRECTOR, APPROVED (for PO)
-        if (activeRole === 'DIRECTOR') {
-          return ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR', 'APPROVED'].includes(r.status)
+        if (role === 'DIRECTOR') {
+          return ['PENDING_DIRECTOR'].includes(r.status)
         }
-        // Admin can act on: SUBMITTED
-        if (activeRole === 'ADMIN') {
-          return ['SUBMITTED'].includes(r.status)
-        }
-        // Finance can act on: APPROVED (for PO), PAYMENT_PENDING
-        if (activeRole === 'FINANCE') {
+        if (role === 'FINANCE') {
+          // Finance acts on APPROVED items to issue POs, and PAYMENT_PENDING to pay
           return ['APPROVED', 'PAYMENT_PENDING'].includes(r.status)
         }
-        // Global Admin sees all pending items
-        if (activeRole === 'GLOBAL_ADMIN') {
+        if (role === 'ADMIN') {
+          return ['SUBMITTED'].includes(r.status)
+        }
+        if (role === 'GLOBAL_ADMIN') {
+          // Actionable statuses across the whole workflow
           return ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR', 'APPROVED', 'PAYMENT_PENDING'].includes(r.status)
         }
         return false

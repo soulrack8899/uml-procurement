@@ -17,6 +17,7 @@ import Login from './pages/Login'
 import UserManagement from './pages/UserManagement'
 import SystemManagement from './pages/SystemManagement'
 import Register from './pages/Register'
+import SearchResults from './pages/SearchResults'
 
 // --- Status Badge Helper (Stitch exact chip classes) ---
 export function getStatusChipClass(status) {
@@ -160,7 +161,7 @@ function AppContent() {
   const sidebarW = isMobile ? 280 : (sidebarOpen ? 288 : 72)
 
   return (
-    <CompanyContext.Provider value={{ currentCompany, companies, selectTenant, refreshKey, activeRole, userName, isMobile }}>
+    <CompanyContext.Provider value={{ currentCompany, companies, selectTenant, refreshKey, activeRole, userName, isMobile, notifications }}>
       <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--surface)' }}>
         
         {/* --- Mobile Overlay --- */}
@@ -385,7 +386,16 @@ function AppContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div style={{ display: isMobile ? 'none' : 'flex', padding: '0.5rem 1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-pill)', border: '1px solid var(--outline-variant-low)', gap: '0.5rem', alignItems: 'center' }}>
                 <Search size={16} />
-                <input placeholder="Search records..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.875rem', width: '120px' }} />
+                <input 
+                  placeholder="Search records..." 
+                  style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '0.875rem', width: '120px' }} 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                       const query = e.target.value;
+                       if (query) navigate(`/search?q=${encodeURIComponent(query)}`);
+                    }
+                  }}
+                />
               </div>
               <div style={{ 
                 width: 36, height: 36, borderRadius: 'var(--radius-pill)', overflow: 'hidden',
@@ -419,6 +429,7 @@ function AppContent() {
                   <Route path="/user-management" element={<UserManagement />} />
                   <Route path="/system-management" element={<SystemManagement />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/search" element={<SearchResults />} />
                   <Route path="/login" element={<Navigate to="/" />} />
                 </Routes>
               </motion.div>
