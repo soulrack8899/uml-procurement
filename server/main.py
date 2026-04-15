@@ -308,6 +308,9 @@ def get_active_session_context(
 
     user = auth_session.get(User, user_id)
     if not user: raise HTTPException(status_code=403, detail="User not found")
+    
+    if user.approval_status != "APPROVED":
+        raise HTTPException(status_code=403, detail=f"Account status: {user.approval_status}. Please contact an administrator.")
 
     company = b_session.get(Company, x_company_id) if x_company_id else None
     
@@ -361,6 +364,8 @@ def login(request: LoginRequest, auth_session: Session = Depends(get_auth_sessio
     user = auth_session.exec(select(User).where(User.email == email_clean)).first()
     
     if not user: raise HTTPException(status_code=401, detail="Account not found")
+    if user.approval_status != "APPROVED":
+        raise HTTPException(status_code=403, detail=f"Access Denied: Account is {user.approval_status}")
     if not verify_password(request.password, user.password): raise HTTPException(status_code=401, detail="Invalid credentials")
     
     primary_access = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == user.id)).first()
@@ -460,9 +465,20 @@ class TransitionRequest(BaseModel):
     action: Optional[str] = "Transition"
 
 @app.post("/requests/{request_id}/transition")
-def transition_request(request_id: int, data: TransitionRequest, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+def transition_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     req = b_session.get(ProcurementRequest, request_id)
     if not req: raise HTTPException(status_code=404)
+
+    # RBAC Guard for Transitions
+    role = context['active_role']
+    if req.status == StatusEnum.SUBMITTED and role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Only Managers can review initial submissions")
+    if req.status == StatusEnum.PENDING_MANAGER and role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Insufficient permission to approve as Manager")
+    if req.status == StatusEnum.PENDING_DIRECTOR and role not in [UserRole.DIRECTOR, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Only Directors can approve high-value requests")
+    if req.status == StatusEnum.APPROVED and role not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Only Finance can issue POs")
 
     old_status = req.status
     settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == req.company_id)).first()
@@ -928,12 +944,34 @@ from fastapi.staticfiles import StaticFiles
 if not os.path.exists("uploads"): os.makedirs("uploads")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+import uuid
+
 @app.post("/upload/")
-async def upload_file(file: UploadFile = File(...)):
-    safe_name = file.filename.replace(" ", "_")
-    path = os.path.join("uploads", safe_name)
-    with open(path, "wb") as b: b.write(await file.read())
-    return {"url": f"/uploads/{safe_name}"}
+async def upload_file(file: UploadFile = File(...), context: dict = Depends(get_active_session_context)):
+    # 1. Security Check: File Type
+    allowed_types = ["application/pdf", "image/png", "image/jpeg", "image/jpg"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Disallowed file type. Only PDF and Images allowed.")
+
+    # 2. Security Check: File Size (10MB Limit)
+    MAX_SIZE = 10 * 1024 * 1024 # 10MB
+    contents = await file.read()
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size 10MB.")
+
+    # 3. Secure Filename Generation
+    ext = os.path.splitext(file.filename)[1].lower()
+    unique_name = f"{uuid.uuid4()}{ext}"
+    path = os.path.join("uploads", unique_name)
+
+    # 4. Save file
+    with open(path, "wb") as b: b.write(contents)
+    
+    return {
+        "url": f"/uploads/{unique_name}",
+        "filename": unique_name,
+        "original_name": file.filename
+    }
 
 if __name__ == "__main__":
     import uvicorn

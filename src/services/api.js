@@ -266,12 +266,23 @@ export const procurementApi = {
   uploadFile: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-
+    
+    // We don't use getHeaders() directly because it sets Content-Type to JSON
+    const token = localStorage.getItem("accessToken");
+    const companyId = localStorage.getItem("currentCompanyId") || "1";
+    
     const response = await fetch(`${API_BASE_URL}/upload/`, {
       method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "X-Company-ID": companyId
+      },
       body: formData,
     });
-    if (!response.ok) throw new Error("File Upload Failed");
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || "File Upload Failed");
+    }
     return response.json();
   }
 }
