@@ -76,10 +76,11 @@ export const procurementApi = {
   },
 
   // --- Procurement ---
-  getRequests: async () => {
-    const response = await fetch(`${API_BASE_URL}/requests/`, { headers: getHeaders() });
+  getRequests: async (skip = 0, limit = 20) => {
+    const response = await fetch(`${API_BASE_URL}/requests/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Unauthorized/Forbidden Context");
-    return response.json();
+    const data = await response.json();
+    return data.items || data;
   },
 
   getRequest: async (id) => {
@@ -122,11 +123,11 @@ export const procurementApi = {
     return response.json();
   },
 
-  transitionStatus: async (requestId, action) => {
+  transitionStatus: async (requestId, action, notes) => {
     const response = await fetch(`${API_BASE_URL}/requests/${requestId}/transition`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ action: action || "Transition" }),
+      body: JSON.stringify({ action: action || "Transition", notes: notes || undefined }),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -211,6 +212,15 @@ export const procurementApi = {
     return data;
   },
 
+  forgotPassword: async (email) => {
+    const response = await fetch(`${API_BASE_URL}/session/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    return response.json();
+  },
+
   register: async (userData) => {
     const response = await fetch(`${API_BASE_URL}/session/register`, {
       method: "POST",
@@ -237,10 +247,11 @@ export const procurementApi = {
     return response.json();
   },
 
-  getUsers: async () => {
-    const response = await fetch(`${API_BASE_URL}/users/`, { headers: getHeaders() });
+  getUsers: async (skip = 0, limit = 50) => {
+    const response = await fetch(`${API_BASE_URL}/users/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Unauthorized to access user directory");
-    return response.json();
+    const data = await response.json();
+    return data.items || data;
   },
 
   updateUser: async (userId, data) => {
@@ -266,11 +277,11 @@ export const procurementApi = {
   uploadFile: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    
+
     // We don't use getHeaders() directly because it sets Content-Type to JSON
     const token = localStorage.getItem("accessToken");
     const companyId = localStorage.getItem("currentCompanyId") || "1";
-    
+
     const response = await fetch(`${API_BASE_URL}/upload/`, {
       method: "POST",
       headers: {
@@ -280,8 +291,8 @@ export const procurementApi = {
       body: formData,
     });
     if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || "File Upload Failed");
+      const err = await response.json();
+      throw new Error(err.detail || "File Upload Failed");
     }
     return response.json();
   }

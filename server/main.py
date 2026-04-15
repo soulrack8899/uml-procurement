@@ -114,6 +114,9 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class PasswordResetRequest(BaseModel):
+    email: str
+
 class RegisterRequest(BaseModel):
     name: str
     email: str
@@ -358,6 +361,48 @@ def register_user(data: RegisterRequest, auth_session: Session = Depends(get_aut
     
     return {"status": "SUCCESS", "user_id": new_user.id}
 
+@app.post("/session/forgot-password")
+def forgot_password_request(data: PasswordResetRequest, auth_session: Session = Depends(get_auth_session)):
+    email_clean = data.email.lower().strip()
+    user = auth_session.exec(select(User).where(User.email == email_clean)).first()
+    
+    # Security: Always return success to prevent email enumeration
+    if not user:
+        return {"status": "SUCCESS", "message": "If this email exists in our system, a recovery password has been sent."}
+    
+    # Generate a random temporary password
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits
+    new_temp_pass = ''.join(secrets.choice(alphabet) for i in range(8))
+    
+    user.password = get_password_hash(new_temp_pass)
+    user.is_temporary_password = True
+    auth_session.add(user)
+    auth_session.commit()
+    
+    # Send Email
+    subject = "ProcuSure Security: Temporary Password Issued"
+    body = f"""
+    <p>Hello {user.name},</p>
+    <p>A password reset was requested for your ProcuSure account.</p>
+    <p>Your temporary password is: <strong>{new_temp_pass}</strong></p>
+    <p>Please log in and update your password immediately.</p>
+    """
+    
+    # Re-use existing email sender logic (could be refactored but keeping minimal for now)
+    try:
+        smtp_server = os.getenv("SMTP_SERVER")
+        if not smtp_server:
+             logger.info(f"--- MOCK RECOVERY EMAIL TO {user.email} ---")
+             logger.info(f"Temp Pass: {new_temp_pass}")
+        else:
+             # Full SMTP logic as in send_approval_email
+             send_approval_email(user.email, user.name, password=new_temp_pass)
+    except: pass
+    
+    return {"status": "SUCCESS", "message": "If this email exists in our system, a recovery password has been sent."}
+
 @app.post("/session/login")
 def login(request: LoginRequest, auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
     email_clean = request.email.lower().strip()
@@ -405,11 +450,29 @@ def whoami(context: dict = Depends(get_active_session_context), b_session: Sessi
         "policy": {"threshold": threshold, "currency": "RM"}
     }
 
-@app.get("/requests/", response_model=List[ProcurementRequest])
-def list_requests(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
-    if context['active_role'] == UserRole.GLOBAL_ADMIN:
-        return b_session.exec(select(ProcurementRequest)).all()
-    return b_session.exec(select(ProcurementRequest).where(ProcurementRequest.company_id == context['company'].id)).all()
+@app.get("/requests/")
+def list_requests(
+    skip: int = 0, 
+    limit: int = 20, 
+    context: dict = Depends(get_active_session_context), 
+    b_session: Session = Depends(get_business_session)
+):
+    query = select(ProcurementRequest).order_by(ProcurementRequest.created_at.desc())
+    if context['active_role'] != UserRole.GLOBAL_ADMIN:
+        query = query.where(ProcurementRequest.company_id == context['company'].id)
+    
+    # Count total for pagination
+    total = len(b_session.exec(query).all())
+    
+    # Apply pagination
+    results = b_session.exec(query.offset(skip).limit(limit)).all()
+    
+    return {
+        "items": results,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
 
 @app.post("/requests/", response_model=ProcurementRequest)
 def create_request(data: RequestCreate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
@@ -463,9 +526,10 @@ def get_audit_logs(request_id: int, context: dict = Depends(get_active_session_c
 
 class TransitionRequest(BaseModel):
     action: Optional[str] = "Transition"
+    notes: Optional[str] = None
 
 @app.post("/requests/{request_id}/transition")
-def transition_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+def transition_request(request_id: int, data: TransitionRequest = None, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     req = b_session.get(ProcurementRequest, request_id)
     if not req: raise HTTPException(status_code=404)
 
@@ -484,8 +548,11 @@ def transition_request(request_id: int, context: dict = Depends(get_active_sessi
     settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == req.company_id)).first()
     threshold = settings.approval_threshold if settings else 5000.0
 
+    action_text = data.action if data else "Transition"
+    notes_text = data.notes if data else None
+
     # Support explicit rejection
-    if data.action and "reject" in data.action.lower():
+    if action_text and "reject" in action_text.lower():
         req.status = StatusEnum.DRAFT
         b_session.add(req)
         b_session.add(AuditLog(
@@ -495,7 +562,8 @@ def transition_request(request_id: int, context: dict = Depends(get_active_sessi
             from_status=old_status,
             to_status=req.status,
             user_name=context['user'].name,
-            user_role=context['active_role']
+            user_role=context['active_role'],
+            notes=notes_text
         ))
         b_session.commit()
         return {"status": "ok", "new_status": req.status}
@@ -531,11 +599,12 @@ def transition_request(request_id: int, context: dict = Depends(get_active_sessi
     b_session.add(AuditLog(
         company_id=req.company_id,
         request_id=req.id,
-        action=data.action or "Transition Workflow",
+        action=action_text or "Transition Workflow",
         from_status=old_status,
         to_status=req.status,
         user_name=context['user'].name,
-        user_role=context['active_role']
+        user_role=context['active_role'],
+        notes=notes_text
     ))
     b_session.commit()
 
@@ -680,8 +749,14 @@ def update_company_settings(company_id: int, threshold: float, context: dict = D
     b_session.commit()
     return {"status": "SUCCESS"}
 
-@app.get("/users/", response_model=List[dict])
-def list_users(context: dict = Depends(get_active_session_context), auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
+@app.get("/users/")
+def list_users(
+    skip: int = 0,
+    limit: int = 50,
+    context: dict = Depends(get_active_session_context), 
+    auth_session: Session = Depends(get_auth_session), 
+    b_session: Session = Depends(get_business_session)
+):
     if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
     
     # Check if user is Global Admin by checking the string value of their active role
@@ -726,7 +801,16 @@ def list_users(context: dict = Depends(get_active_session_context), auth_session
             "is_temporary_password": u.is_temporary_password,
             "companies": len(set([t.company_id for t in tenants]))
         })
-    return result
+    
+    # Apply manual limit since we built the list manually for role calculation complex logic
+    paginated_result = result[skip : skip + limit]
+    
+    return {
+        "items": paginated_result,
+        "total": len(result),
+        "skip": skip,
+        "limit": limit
+    }
 
 
 @app.patch("/users/{user_id}")

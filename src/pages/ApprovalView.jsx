@@ -6,19 +6,40 @@ import { procurementApi } from '../services/api'
 import { getStatusChipClass, useCompany } from '../App'
 
 const ApprovalView = () => {
-  const { isMobile } = useCompany()
+  const { isMobile, activeRole } = useCompany()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [activeRole])
 
   const fetchData = async () => {
     try {
       const data = await procurementApi.getRequests()
-      // Filter for requests that actually need interaction or attention
-      const pending = data.filter(r => 
-        ['PENDING_MANAGER', 'PENDING_DIRECTOR', 'APPROVED'].includes(r.status)
-      )
+      // Filter for requests that the current role can actually act on
+      const pending = data.filter(r => {
+        if (!activeRole) return false
+        // Manager can act on: SUBMITTED, PENDING_MANAGER
+        if (activeRole === 'MANAGER') {
+          return ['SUBMITTED', 'PENDING_MANAGER'].includes(r.status)
+        }
+        // Director can act on: SUBMITTED, PENDING_MANAGER, PENDING_DIRECTOR, APPROVED (for PO)
+        if (activeRole === 'DIRECTOR') {
+          return ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR', 'APPROVED'].includes(r.status)
+        }
+        // Admin can act on: SUBMITTED
+        if (activeRole === 'ADMIN') {
+          return ['SUBMITTED'].includes(r.status)
+        }
+        // Finance can act on: APPROVED (for PO), PAYMENT_PENDING
+        if (activeRole === 'FINANCE') {
+          return ['APPROVED', 'PAYMENT_PENDING'].includes(r.status)
+        }
+        // Global Admin sees all pending items
+        if (activeRole === 'GLOBAL_ADMIN') {
+          return ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR', 'APPROVED', 'PAYMENT_PENDING'].includes(r.status)
+        }
+        return false
+      })
       setRequests(pending)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
@@ -31,13 +52,21 @@ const ApprovalView = () => {
         <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>Workflow</span>
           <span style={{ color: 'var(--outline)', fontSize: '0.75rem' }}>›</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>Pending</span>
+          <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
+            {activeRole === 'FINANCE' ? 'Payment Queue' : 'Pending Approvals'}
+          </span>
         </nav>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 900, color: 'var(--primary)' }}>Pending Approvals</h1>
+          <h1 style={{ fontFamily: 'var(--font-headline)', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 900, color: 'var(--primary)' }}>
+            {activeRole === 'FINANCE' ? 'Payment Requests' :
+              activeRole === 'GLOBAL_ADMIN' ? 'All Pending Actions' :
+                activeRole === 'DIRECTOR' ? 'Director Queue' :
+                  activeRole === 'MANAGER' ? 'Manager Queue' :
+                    'Pending Approvals'}
+          </h1>
           <span style={{ padding: '0.5rem 1rem', background: 'var(--warning-container)', color: 'white', borderRadius: 'var(--radius-pill)', fontSize: '0.625rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Clock size={12} />
-            {requests.length} PENDING
+            {requests.length} {requests.length === 1 ? 'ITEM' : 'ITEMS'}
           </span>
         </div>
       </section>
@@ -58,10 +87,10 @@ const ApprovalView = () => {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
-              style={{ 
-                display: 'flex', flexDirection: isMobile ? 'column' : 'row', 
+              style={{
+                display: 'flex', flexDirection: isMobile ? 'column' : 'row',
                 alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between',
-                padding: isMobile ? '1rem' : '1.25rem 2rem', background: 'var(--surface-container-lowest)', 
+                padding: isMobile ? '1rem' : '1.25rem 2rem', background: 'var(--surface-container-lowest)',
                 borderRadius: 'var(--radius-sm)', border: '1px solid rgba(194,198,211,0.2)', gap: isMobile ? '1rem' : '2rem'
               }}
             >
@@ -82,15 +111,15 @@ const ApprovalView = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: isMobile ? '100%' : 'auto', gap: '1.5rem' }}>
-                 <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
-                    <p style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', marginBottom: '0.25rem' }}>TOTAL VALUE</p>
-                    <p style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '1.25rem' }}>RM {app.total_amount.toLocaleString()}</p>
-                 </div>
-                 <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', marginBottom: '0.25rem' }}>GATE STATUS</p>
-                    <span className={`chip ${getStatusChipClass(app.status)}`} style={{ fontSize: '0.625rem', fontWeight: 900 }}>{app.status}</span>
-                 </div>
-                 {!isMobile && <ArrowRight size={20} style={{ color: 'var(--outline)', opacity: 0.3 }} />}
+                <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+                  <p style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', marginBottom: '0.25rem' }}>TOTAL VALUE</p>
+                  <p style={{ fontWeight: 900, color: 'var(--primary)', fontSize: '1.25rem' }}>RM {app.total_amount.toLocaleString()}</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', marginBottom: '0.25rem' }}>GATE STATUS</p>
+                  <span className={`chip ${getStatusChipClass(app.status)}`} style={{ fontSize: '0.625rem', fontWeight: 900 }}>{app.status}</span>
+                </div>
+                {!isMobile && <ArrowRight size={20} style={{ color: 'var(--outline)', opacity: 0.3 }} />}
               </div>
             </motion.div>
           </Link>

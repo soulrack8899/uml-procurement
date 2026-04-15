@@ -176,10 +176,40 @@ const Login = ({ onLogin }) => {
                <AlertCircle size={48} style={{ color: 'var(--primary)', marginBottom: '1.5rem' }} />
                <h2 style={{ fontSize: '1.25rem', fontWeight: 900, marginBottom: '1rem' }}>Account Recovery</h2>
                <p style={{ fontSize: '0.875rem', color: 'var(--outline)', lineHeight: 1.6, marginBottom: '2rem' }}>
-                  For security reasons, password resets must be authorized by an Administrator.
-                  Please contact your **Company Admin** or the **Global Admin** to receive a temporary reset code.
+                  Enter your work email below. If an account is found, we will send a temporary password immediately.
                </p>
-               <button onClick={() => setForgotPwd(false)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Back to Login</button>
+               
+               <div style={{ marginBottom: '1.5rem', textAlign: 'left' }}>
+                  <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, color: 'var(--outline)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Work Email</label>
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    placeholder="name@company.com"
+                    style={{ width: '100%', padding: '0.75rem 1rem', background: 'var(--surface-container-high)', border: 'none', borderRadius: 'var(--radius-sm)', fontWeight: 600, color: 'var(--primary)' }} 
+                  />
+               </div>
+
+               <button 
+                onClick={async () => {
+                   setIsLoading(true);
+                   try {
+                     const res = await procurementApi.forgotPassword(email);
+                     alert(res.message);
+                     setForgotPwd(false);
+                   } catch (err) { alert(err.message); }
+                   finally { setIsLoading(false); }
+                }}
+                disabled={isLoading || !email}
+                className="gradient-fill" 
+                style={{ width: '100%', padding: '1rem', borderRadius: 'var(--radius-sm)', border: 'none', color: 'white', fontWeight: 900, cursor: 'pointer', marginBottom: '1.5rem' }}
+               >
+                 {isLoading ? 'Sending...' : 'Request Recovery'}
+               </button>
+
+               <div>
+                 <button onClick={() => setForgotPwd(false)} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 800, cursor: 'pointer' }}>Back to Login</button>
+               </div>
             </motion.div>
           ) : (
             <motion.form 
