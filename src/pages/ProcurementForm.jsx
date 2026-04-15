@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Trash2, ArrowLeft, Upload, FileText, CheckCircle2, Info, ArrowRight, X, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -17,6 +17,15 @@ const ProcurementForm = () => {
   const [uploading, setUploading] = useState(false)
   const [quotationUrl, setQuotationUrl] = useState(null)
   const [quotationName, setQuotationName] = useState('')
+  const [threshold, setThreshold] = useState(5000)
+
+  useEffect(() => {
+    if (currentCompany) {
+      procurementApi.getSettings(currentCompany.id).then(data => {
+        setThreshold(data.approval_threshold || 5000)
+      }).catch(err => console.error("Could not fetch settings:", err))
+    }
+  }, [currentCompany])
 
   const addItem = () => setItems([...items, { description: '', quantity: 1, uom: 'PCS', unitPrice: 0 }])
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index))
@@ -223,7 +232,7 @@ const ProcurementForm = () => {
                       {uploading ? "Processing Document..." : quotationUrl ? "Quotation Attached" : "Add Quotation"}
                     </p>
                     <p style={{ fontSize: '0.75rem', color: 'var(--outline)', marginTop: '4px' }}>
-                      {quotationName || "Mandatory for spends > RM 1,000"}
+                      {quotationName || `Mandatory for spends > RM 1,000`}
                     </p>
                   </div>
                 </motion.div>
@@ -242,7 +251,13 @@ const ProcurementForm = () => {
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'flex-end', alignItems: 'center', gap: '2rem', paddingTop: '3rem', borderTop: '1px solid rgba(194,198,211,0.1)' }}>
               <div style={{ display: 'flex', gap: '1.5rem', width: isMobile ? '100%' : 'auto' }}>
-                <button type="button" style={{ padding: '1rem 2rem', background: 'transparent', border: 'none', color: 'var(--outline)', fontWeight: 800, cursor: 'pointer' }}>Cancel</button>
+                <button 
+                  type="button" 
+                  onClick={() => navigate(-1)}
+                  style={{ padding: '1rem 2rem', background: 'transparent', border: 'none', color: 'var(--outline)', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
                 <button
                   type="button"
                   onClick={handleSubmit}
@@ -267,7 +282,7 @@ const ProcurementForm = () => {
               <h4 style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary)', textTransform: 'uppercase' }}>Approval Rules</h4>
             </div>
             <ul style={{ paddingLeft: '1.25rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <li>Requests over <strong>RM 5,000.00</strong> will be sent to the <strong>Manager</strong> for review.</li>
+              <li>Requests over <strong>RM {threshold.toLocaleString()}</strong> will be sent to the <strong>Manager</strong> for review.</li>
               <li>All actions are recorded in the system audit log for security.</li>
               <li>Ensure UOM (Unit of Measure) is clearly specified for physical goods.</li>
             </ul>

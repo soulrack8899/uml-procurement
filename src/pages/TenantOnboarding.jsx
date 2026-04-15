@@ -142,7 +142,7 @@ const TenantOnboarding = () => {
                       <div style={{ display: 'flex', gap: '1rem' }}>
                         <Zap size={14} style={{ marginTop: 2, color: 'var(--tertiary)', flexShrink: 0 }} />
                         <p style={{ fontSize: '0.8125rem', color: 'var(--outline)' }}>
-                           <span style={{ fontWeight: 800, color: 'var(--on-surface)' }}>Initial Fund:</span> RM 5,000 petty cash fund will be allocated.
+                           <span style={{ fontWeight: 800, color: 'var(--on-surface)' }}>Policy Control:</span> Standardized approval thresholds will be active.
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '1rem' }}>

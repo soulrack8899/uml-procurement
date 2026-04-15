@@ -552,17 +552,7 @@ def transition_request(request_id: int, data: TransitionRequest = None, context:
     req = b_session.get(ProcurementRequest, request_id)
     if not req: raise HTTPException(status_code=404)
 
-    # RBAC Guard for Transitions
     role = context['active_role']
-    if req.status == StatusEnum.SUBMITTED and role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
-         raise HTTPException(status_code=403, detail="Only Managers can review initial submissions")
-    if req.status == StatusEnum.PENDING_MANAGER and role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
-         raise HTTPException(status_code=403, detail="Insufficient permission to approve as Manager")
-    if req.status == StatusEnum.PENDING_DIRECTOR and role not in [UserRole.DIRECTOR, UserRole.GLOBAL_ADMIN]:
-         raise HTTPException(status_code=403, detail="Only Directors can approve high-value requests")
-    if req.status == StatusEnum.APPROVED and role not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
-         raise HTTPException(status_code=403, detail="Only Finance can issue POs")
-
     old_status = req.status
     settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == req.company_id)).first()
     threshold = settings.approval_threshold if settings else 5000.0
@@ -570,7 +560,30 @@ def transition_request(request_id: int, data: TransitionRequest = None, context:
     action_text = data.action if data else "Transition"
     notes_text = data.notes if data else None
 
-    # Support explicit rejection
+    # Support Requester Withdrawal
+    if action_text and "withdraw" in action_text.lower():
+        if req.created_by != context['user'].id and role != UserRole.GLOBAL_ADMIN:
+             raise HTTPException(status_code=403, detail="Only the original requester can withdraw this request")
+        
+        if req.status not in [StatusEnum.SUBMITTED, StatusEnum.PENDING_MANAGER, StatusEnum.PENDING_DIRECTOR]:
+             raise HTTPException(status_code=400, detail="Cannot withdraw a request that is already being processed or approved")
+
+        req.status = StatusEnum.DRAFT
+        b_session.add(req)
+        b_session.add(AuditLog(
+            company_id=req.company_id,
+            request_id=req.id,
+            action="Request Withdrawn",
+            from_status=old_status,
+            to_status=req.status,
+            user_name=context['user'].name,
+            user_role=context['active_role'],
+            notes="User manually withdrew to draft"
+        ))
+        b_session.commit()
+        return {"status": "ok", "new_status": req.status}
+
+    # Support Rejection
     if action_text and "reject" in action_text.lower():
         req.status = StatusEnum.DRAFT
         req.rejection_reason = notes_text
@@ -588,54 +601,38 @@ def transition_request(request_id: int, data: TransitionRequest = None, context:
         b_session.commit()
         return {"status": "ok", "new_status": req.status}
 
-    # Workflow Transitions
+    # Workflow RBAC
+    if req.status == StatusEnum.SUBMITTED and role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Only Managers can review initial submissions")
+    if req.status == StatusEnum.PENDING_MANAGER and role not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Insufficient permission to approve as Manager")
+    if req.status == StatusEnum.PENDING_DIRECTOR and role not in [UserRole.DIRECTOR, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Only Directors can approve high-value requests")
+    if req.status == StatusEnum.APPROVED and role not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+         raise HTTPException(status_code=403, detail="Only Finance can issue POs")
+
     if req.status == StatusEnum.SUBMITTED:
-        if req.total_amount > threshold:
-            req.status = StatusEnum.PENDING_DIRECTOR
-        else:
-            req.status = StatusEnum.PENDING_MANAGER
-
+        req.status = StatusEnum.PENDING_DIRECTOR if req.total_amount > threshold else StatusEnum.PENDING_MANAGER
     elif req.status == StatusEnum.PENDING_MANAGER:
-        # Assuming manager approved
-        if req.total_amount > threshold:
-            req.status = StatusEnum.PENDING_DIRECTOR
-        else:
-            req.status = StatusEnum.APPROVED
-
+        req.status = StatusEnum.PENDING_DIRECTOR if req.total_amount > threshold else StatusEnum.APPROVED
     elif req.status == StatusEnum.PENDING_DIRECTOR:
         req.status = StatusEnum.APPROVED
-
     elif req.status == StatusEnum.APPROVED:
         req.status = StatusEnum.PO_ISSUED
-
     elif req.status == StatusEnum.PO_ISSUED:
         req.status = StatusEnum.PAYMENT_PENDING
-
     elif req.status == StatusEnum.PAYMENT_PENDING:
         req.status = StatusEnum.PAID
 
     b_session.add(req)
-    # Log the transition
     b_session.add(AuditLog(
-        company_id=req.company_id,
-        request_id=req.id,
-        action=action_text or "Transition Workflow",
-        from_status=old_status,
-        to_status=req.status,
-        user_name=context['user'].name,
-        user_role=context['active_role'],
-        notes=notes_text
+        company_id=req.company_id, request_id=req.id,
+        action=action_text, from_status=old_status, to_status=req.status,
+        user_name=context['user'].name, user_role=context['active_role'], notes=notes_text
     ))
     b_session.commit()
-
-    # Send email notifications on approval
-    if req.status == StatusEnum.APPROVED and old_status != StatusEnum.APPROVED:
-        # Notify the requester
-        requester = auth_session.get(User, req.created_by)
-        if requester:
-            send_approval_email(requester.email, requester.name)
-
     return {"status": "ok", "new_status": req.status}
+
 
 @app.get("/requests/{request_id}/generate-po")
 def get_po_report(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):

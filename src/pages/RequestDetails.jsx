@@ -113,8 +113,9 @@ const RequestDetails = () => {
     return false
   }
 
-  const canCancel = (status, role) => {
-    return role === 'REQUESTER' && ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR'].includes(status)
+  const canCancel = (status, role, creatorId) => {
+    const myId = parseInt(localStorage.getItem("currentUserId"))
+    return (creatorId === myId || role === 'GLOBAL_ADMIN') && ['SUBMITTED', 'PENDING_MANAGER', 'PENDING_DIRECTOR'].includes(status)
   }
 
   const getNextStatus = (current) => {
@@ -341,7 +342,7 @@ const RequestDetails = () => {
           )}
 
           {/* Requester Cancel */}
-          {canCancel(request.status, activeRole) && (
+          {canCancel(request.status, activeRole, request.created_by) && (
             <div className="surface-card" style={{ padding: '1.75rem', background: 'var(--surface-container-high)', border: '1px solid var(--warning-container)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                 <Ban size={18} style={{ color: 'var(--warning)' }} />
