@@ -499,7 +499,7 @@ def create_request(data: RequestCreate, context: dict = Depends(get_active_sessi
         user_role=context['active_role']
     ))
     b_session.commit()
-    return new_req
+    return new_req.dict()
 
 @app.get("/requests/{request_id}", response_model=ProcurementRequest)
 def get_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
