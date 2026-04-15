@@ -25,8 +25,14 @@ export const procurementApi = {
 
   // --- Companies ---
   getCompanies: async () => {
-    const response = await fetch(`${API_BASE_URL}/companies/`);
+    const response = await fetch(`${API_BASE_URL}/companies/`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Failed to fetch companies");
+    return response.json();
+  },
+  
+  getPublicCompanies: async () => {
+    const response = await fetch(`${API_BASE_URL}/companies/public`);
+    if (!response.ok) throw new Error("Failed to fetch public companies");
     return response.json();
   },
   

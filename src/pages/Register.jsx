@@ -27,7 +27,7 @@ const Register = () => {
 
   const fetchCompanies = async () => {
     try {
-      const data = await procurementApi.getCompanies();
+      const data = await procurementApi.getPublicCompanies();
       setCompanies(data);
     } catch (err) {
       console.error("Failed to load entities", err);

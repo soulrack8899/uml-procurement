@@ -527,11 +527,7 @@ def get_po_report(request_id: int, context: dict = Depends(get_active_session_co
     from fastapi.responses import FileResponse
     return FileResponse(file_path, filename=f"PO_{request_id}.pdf")
 
-@app.get("/companies/", response_model=List[Company])
-def list_companies(b_session: Session = Depends(get_business_session)):
-    # Simpler version for now to unblock frontend: return all companies
-    # The frontend uses this to populate the tenant switcher
-    return b_session.exec(select(Company)).all()
+
 
 @app.post("/companies/onboard")
 def onboard_company(company: Company, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session), auth_session: Session = Depends(get_auth_session)):
@@ -593,16 +589,36 @@ def get_company_settings(company_id: int, context: dict = Depends(get_active_ses
     return settings
 
 @app.get("/companies/", response_model=List[Company])
-def list_companies(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
-    """Fetch all companies for Global Admins, or just the current company for others."""
-    if context['active_role'] == UserRole.GLOBAL_ADMIN:
+def list_companies(request: Request, auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
+    """Fetch all companies for Global Admins, or just the associated companies for others."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+         raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    token = auth_header.split(" ")[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+    except: raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = auth_session.get(User, user_id)
+    if not user: raise HTTPException(status_code=403, detail="User not found")
+
+    if user.global_role == UserRole.GLOBAL_ADMIN:
         return b_session.exec(select(Company)).all()
     
-    # Non-global admins only see their associated company
-    if context['company']:
-        return [context['company']]
+    # Non-global admins see companies they have access to
+    access_list = b_session.exec(select(TenantAccess).where(TenantAccess.user_id == user.id)).all()
+    company_ids = [a.company_id for a in access_list]
     
-    return []
+    if not company_ids:
+        return []
+        
+    return b_session.exec(select(Company).where(Company.id.in_(company_ids))).all()
+
+@app.get("/companies/public", response_model=List[Company])
+def list_public_companies(b_session: Session = Depends(get_business_session)):
+    return b_session.exec(select(Company)).all()
 
 @app.patch("/companies/{company_id}/settings")
 def update_company_settings(company_id: int, threshold: float, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
