@@ -162,7 +162,11 @@ async def custom_500_handler(request: Request, exc: Exception):
     traceback.print_exc()
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal Server Error. Our team has been notified. Please try again later."},
+        content={
+            "detail": f"Internal Server Error: {str(exc)}",
+            "type": type(exc).__name__,
+            "traceback": traceback.format_exc()
+        },
         headers={"Access-Control-Allow-Origin": "*"}
     )
 
@@ -1064,14 +1068,15 @@ def get_dashboard_stats(context: dict = Depends(get_active_session_context), b_s
         if settings:
             display_threshold = settings.approval_threshold
 
-    return {
+    from fastapi.encoders import jsonable_encoder
+    return jsonable_encoder({
         "pending": pending,
         "completed": completed,
         "total_spend": total_spend,
         "vendors": len(vendors),
         "claims": len(claims),
         "threshold": display_threshold
-    }
+    })
 
 @app.get("/audit/recent", response_model=List[AuditLog])
 def get_recent_audit_logs(limit: int = 20, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
