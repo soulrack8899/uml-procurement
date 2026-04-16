@@ -139,8 +139,31 @@ app = FastAPI(title="UMLAB SaaS Master API")
 # Startup Logic
 @app.on_event("startup")
 def on_startup():
-    from models import create_db_and_tables
+    from models import create_db_and_tables, procurement_engine
+    from sqlalchemy import text
+    
+    # 1. Standard Table Creation (for missing tables like AuditLog)
     create_db_and_tables()
+    
+    # 2. Hard Schema Sync for Existing Tables (adding mission columns)
+    with procurement_engine.connect() as conn:
+        # Add rejection_reason to procurementrequest if missing
+        try:
+            conn.execute(text("ALTER TABLE procurementrequest ADD COLUMN rejection_reason TEXT"))
+            conn.commit()
+            logger.info("Sync: Added rejection_reason column to procurementrequest.")
+        except Exception:
+            # Column likely already exists or table doesn't exist yet
+            pass
+            
+        # Add ledger_url to pettycash if missing
+        try:
+            conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
+            conn.commit()
+            logger.info("Sync: Added ledger_url column to pettycash.")
+        except Exception:
+            pass
+
     logger.info("Database schema verification and table creation complete.")
 
 # Middleware
