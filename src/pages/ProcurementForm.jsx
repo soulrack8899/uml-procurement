@@ -19,13 +19,32 @@ const ProcurementForm = () => {
   const [quotationName, setQuotationName] = useState('')
   const [threshold, setThreshold] = useState(5000)
 
+  // Vendor Sync State
+  const [allVendors, setAllVendors] = useState([])
+  const [filteredVendors, setFilteredVendors] = useState([])
+  const [showVendorDropdown, setShowVendorDropdown] = useState(false)
+  const vendorDropdownRef = useRef(null)
+
   useEffect(() => {
     if (currentCompany) {
       procurementApi.getSettings(currentCompany.id).then(data => {
         setThreshold(data.approval_threshold || 5000)
       }).catch(err => console.error("Could not fetch settings:", err))
+
+      // Fetch Vendors
+      procurementApi.getVendors().then(setAllVendors).catch(err => console.error("Could not fetch vendors:", err))
     }
   }, [currentCompany])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(e.target)) {
+        setShowVendorDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const addItem = () => setItems([...items, { description: '', quantity: 1, uom: 'PCS', unitPrice: 0 }])
   const removeItem = (index) => setItems(items.filter((_, i) => i !== index))
@@ -62,6 +81,17 @@ const ProcurementForm = () => {
     }
 
     const total = calculateTotal()
+    
+    // Vendor Sync Validation
+    const isRegistered = allVendors.some(v => v.name.toLowerCase() === vendor.name.toLowerCase())
+    if (!isRegistered && vendor.name) {
+      alert(`The vendor "${vendor.name}" is not registered in the directory. Please select a registered vendor or register them first in the Vendor Directory.`)
+      return
+    }
+    if (!vendor.name) {
+      alert("Please select a vendor.")
+      return
+    }
     if (total > 1000 && !quotationUrl) {
       if (!window.confirm("Standard policy requires a quotation for spending over RM 1,000. Proceed anyway?")) {
         return;
@@ -142,13 +172,69 @@ const ProcurementForm = () => {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '2.5rem' }}>
-                <div>
+                <div style={{ position: 'relative' }} ref={vendorDropdownRef}>
                   <label style={S.label}>Vendor Selection</label>
-                  <input required placeholder="Start typing vendor name..." value={vendor.name} onChange={e => setVendor({ ...vendor, name: e.target.value })} style={S.input} />
+                  <input 
+                    required 
+                    placeholder="Start typing vendor name..." 
+                    value={vendor.name} 
+                    onFocus={() => setShowVendorDropdown(true)}
+                    onChange={e => {
+                      const val = e.target.value
+                      setVendor({ ...vendor, name: val })
+                      const filtered = allVendors.filter(v => 
+                        v.name.toLowerCase().includes(val.toLowerCase())
+                      )
+                      setFilteredVendors(filtered)
+                      setShowVendorDropdown(true)
+                    }} 
+                    style={S.input} 
+                  />
+                  <AnimatePresence>
+                    {showVendorDropdown && filteredVendors.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: 10 }}
+                        style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0,
+                          background: 'white', borderRadius: 'var(--radius-sm)',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                          border: '1px solid var(--outline-variant)',
+                          zIndex: 100, marginTop: '8px', maxHeight: '250px', overflowY: 'auto'
+                        }}>
+                        {filteredVendors.map(v => (
+                          <div 
+                            key={v.id} 
+                            onClick={() => {
+                              setVendor({ name: v.name, id: `V-${v.id}` })
+                              setShowVendorDropdown(false)
+                            }}
+                            className="vendor-suggestion-item"
+                            style={{
+                              padding: '1rem 1.5rem', cursor: 'pointer',
+                              borderBottom: '1px solid var(--surface-variant)',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                            }}>
+                            <div>
+                              <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)', fontSize: '0.875rem' }}>{v.name}</p>
+                              <p style={{ margin: 0, fontSize: '0.625rem', color: 'var(--outline)' }}>{v.vendor_type}</p>
+                            </div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--outline)' }}>V-{v.id}</span>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
                 <div>
-                  <label style={S.label}>Vendor ID</label>
-                  <input placeholder="V-XXXX" value={vendor.id} onChange={e => setVendor({ ...vendor, id: e.target.value })} style={{ ...S.input, color: 'var(--outline)' }} />
+                  <label style={S.label}>Vendor ID (Automatic or Manual)</label>
+                  <input 
+                    placeholder="V-XXXX" 
+                    value={vendor.id} 
+                    onChange={e => setVendor({ ...vendor, id: e.target.value })} 
+                    style={{ ...S.input, color: 'var(--primary)', fontWeight: 900 }} 
+                  />
                 </div>
               </div>
             </div>
@@ -296,6 +382,11 @@ const ProcurementForm = () => {
         </div>
 
       </div>
+      <style>{`
+        .vendor-suggestion-item:hover {
+          background: var(--surface-container-high) !important;
+        }
+      `}</style>
     </div>
   )
 }
