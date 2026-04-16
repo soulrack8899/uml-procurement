@@ -170,7 +170,15 @@ class AuditLog(SQLModel, table=True):
     
     request: Optional[ProcurementRequest] = Relationship(back_populates="audit_logs")
 
-# --- DATABASE CONFIGURATION ---
+class AppNotification(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int # Loose link to Auth DB
+    company_id: int = Field(foreign_key="company.id")
+    message: str
+    is_read: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    company: Company = Relationship()
 
 # Detect PostgreSQL Connection String (Railway Production)
 DB_URL = os.getenv("DATABASE_URL")
@@ -201,6 +209,6 @@ def create_db_and_tables():
     procurement_tables = [
         TenantAccess.__table__, Company.__table__, CompanySettings.__table__,
         ProcurementRequest.__table__, LineItem.__table__, FileMetadata.__table__,
-        PettyCash.__table__, AuditLog.__table__, Vendor.__table__
+        PettyCash.__table__, AuditLog.__table__, Vendor.__table__, AppNotification.__table__
     ]
     SQLModel.metadata.create_all(procurement_engine, tables=procurement_tables)

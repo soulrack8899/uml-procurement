@@ -185,11 +185,7 @@ async def custom_500_handler(request: Request, exc: Exception):
     traceback.print_exc()
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": f"Internal Server Error: {str(exc)}",
-            "type": type(exc).__name__,
-            "traceback": traceback.format_exc()
-        },
+        content={"detail": "Internal Server Error. Our team has been notified. Please try again later."},
         headers={"Access-Control-Allow-Origin": "*"}
     )
 
