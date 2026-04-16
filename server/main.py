@@ -1035,11 +1035,14 @@ def get_dashboard_stats(context: dict = Depends(get_active_session_context), b_s
     # Calculations
     pending = len([r for r in requests if "PENDING" in (r.status.value if hasattr(r.status, "value") else str(r.status))])
     completed = len([r for r in requests if (r.status.value if hasattr(r.status, "value") else str(r.status)) in ["APPROVED", "PO_ISSUED", "PAID"]])
-    total_spend = sum([r.total_amount for r in requests if (r.status.value if hasattr(r.status, "value") else str(r.status)) in ["APPROVED", "PO_ISSUED", "PAID"]])
+    total_spend = sum([r.total_amount for r in requests if r.total_amount and (r.status.value if hasattr(r.status, "value") else str(r.status)) in ["APPROVED", "PO_ISSUED", "PAID"]])
     
     # Fetch company threshold
-    settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == cid)).first()
-    display_threshold = settings.approval_threshold if settings else 5000.0
+    display_threshold = 5000.0
+    if cid:
+        settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == cid)).first()
+        if settings:
+            display_threshold = settings.approval_threshold
 
     return {
         "pending": pending,
