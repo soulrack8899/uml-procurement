@@ -17,13 +17,20 @@ const getHeaders = () => {
 
 const handleResponse = async (response, defaultMsg = "Request failed") => {
   if (!response.ok) {
-    let errData;
+    let errorMessage = defaultMsg;
     try {
-      errData = await response.json();
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorMessage;
+      } else {
+        const rawText = await response.text();
+        errorMessage = `Server Error (${response.status}): ${rawText.substring(0, 50)}...`;
+      }
     } catch (e) {
-      throw new Error(`Server Error (${response.status}): Could not parse response.`);
+      errorMessage = `Server Error (${response.status}): Could not parse response context.`;
     }
-    throw new Error(errData.detail || defaultMsg);
+    throw new Error(errorMessage);
   }
   return response.json();
 };

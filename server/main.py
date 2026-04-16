@@ -136,6 +136,13 @@ class UserCreate(BaseModel):
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
+# Startup Logic
+@app.on_event("startup")
+def on_startup():
+    from models import create_db_and_tables
+    create_db_and_tables()
+    logger.info("Database schema verification and table creation complete.")
+
 # Middleware
 allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
 app.add_middleware(
@@ -498,13 +505,24 @@ def create_request(data: RequestCreate, context: dict = Depends(get_active_sessi
     if not context.get('company'):
         raise HTTPException(status_code=400, detail="A valid company must be selected to perform this action. If you are a Global Admin, please select a workplace.")
     
-    new_req = ProcurementRequest(**data.dict(exclude={'items'}), company_id=context['company'].id, created_by=context['user'].id, status=StatusEnum.SUBMITTED)
-    new_req.items = [LineItem(**item.dict()) for item in data.items]
-    b_session.add(new_req)
-    b_session.commit()
-    b_session.refresh(new_req)
+    from fastapi.encoders import jsonable_encoder
     
-    # Audit log
+    # 1. Create Request Object
+    new_req = ProcurementRequest(
+        **data.dict(exclude={'items'}), 
+        company_id=context['company'].id, 
+        created_by=context['user'].id, 
+        status=StatusEnum.SUBMITTED
+    )
+    
+    # 2. Add Line Items
+    new_req.items = [LineItem(**item.dict()) for item in data.items]
+    
+    # 3. Save Initial Request
+    b_session.add(new_req)
+    b_session.flush() # Ensure ID is generated for Audit Log
+    
+    # 4. Create Audit Log in the same transaction
     b_session.add(AuditLog(
         company_id=context['company'].id,
         request_id=new_req.id,
@@ -513,19 +531,21 @@ def create_request(data: RequestCreate, context: dict = Depends(get_active_sessi
         user_name=context['user'].name,
         user_role=context['active_role']
     ))
-    from fastapi.encoders import jsonable_encoder
+    
+    # 5. Atomic Commit
     b_session.commit()
     b_session.refresh(new_req)
-    # Force explicit return to bypass SQLModel serialization quirks
-    return {
+    
+    # 6. Response with serialization protection
+    return jsonable_encoder({
         "id": new_req.id,
         "title": new_req.title,
         "vendor_name": new_req.vendor_name,
         "vendor_id": new_req.vendor_id,
         "total_amount": new_req.total_amount,
         "status": new_req.status,
-        "created_at": new_req.created_at.isoformat() if new_req.created_at else None
-    }
+        "created_at": new_req.created_at
+    })
 
 @app.get("/requests/{request_id}", response_model=ProcurementRequest)
 def get_request(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
