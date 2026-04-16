@@ -147,6 +147,18 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+@app.exception_handler(Exception)
+async def custom_500_handler(request: Request, exc: Exception):
+    """Ensure CORS headers are present even on unhandled crashes."""
+    logger.error(f"UNHANDLED SERVER ERROR: {exc}")
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error. Our team has been notified. Please try again later."},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
 # --- Session Dependencies ---
 def get_auth_session():
     with Session(auth_engine) as session: yield session
@@ -483,6 +495,9 @@ def list_requests(
 
 @app.post("/requests/")
 def create_request(data: RequestCreate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    if not context.get('company'):
+        raise HTTPException(status_code=400, detail="A valid company must be selected to perform this action. If you are a Global Admin, please select a workplace.")
+    
     new_req = ProcurementRequest(**data.dict(exclude={'items'}), company_id=context['company'].id, created_by=context['user'].id, status=StatusEnum.SUBMITTED)
     new_req.items = [LineItem(**item.dict()) for item in data.items]
     b_session.add(new_req)
@@ -999,7 +1014,7 @@ def create_vendor(v: Vendor, context: dict = Depends(get_active_session_context)
 @app.get("/dashboard/stats")
 def get_dashboard_stats(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     """Aggregated statistics for the dashboard dashboard widgets."""
-    cid = context['company'].id if context['company'] else None
+    cid = context['company'].id if context.get('company') else None
     if not cid and context['active_role'] != UserRole.GLOBAL_ADMIN:
         return {"pending": 0, "completed": 0, "total_spend": 0, "vendors": 0, "claims": 0}
 
@@ -1018,9 +1033,9 @@ def get_dashboard_stats(context: dict = Depends(get_active_session_context), b_s
     vendors = b_session.exec(v_query).all()
 
     # Calculations
-    pending = len([r for r in requests if "PENDING" in r.status.value])
-    completed = len([r for r in requests if r.status in [StatusEnum.APPROVED, StatusEnum.PO_ISSUED, StatusEnum.PAID]])
-    total_spend = sum([r.total_amount for r in requests if r.status in [StatusEnum.APPROVED, StatusEnum.PO_ISSUED, StatusEnum.PAID]])
+    pending = len([r for r in requests if "PENDING" in (r.status.value if hasattr(r.status, "value") else str(r.status))])
+    completed = len([r for r in requests if (r.status.value if hasattr(r.status, "value") else str(r.status)) in ["APPROVED", "PO_ISSUED", "PAID"]])
+    total_spend = sum([r.total_amount for r in requests if (r.status.value if hasattr(r.status, "value") else str(r.status)) in ["APPROVED", "PO_ISSUED", "PAID"]])
     
     # Fetch company threshold
     settings = b_session.exec(select(CompanySettings).where(CompanySettings.company_id == cid)).first()

@@ -15,25 +15,35 @@ const getHeaders = () => {
   return headers;
 };
 
+const handleResponse = async (response, defaultMsg = "Request failed") => {
+  if (!response.ok) {
+    let errData;
+    try {
+      errData = await response.json();
+    } catch (e) {
+      throw new Error(`Server Error (${response.status}): Could not parse response.`);
+    }
+    throw new Error(errData.detail || defaultMsg);
+  }
+  return response.json();
+};
+
 export const procurementApi = {
   // --- Session & Active Role Context ---
   whoami: async () => {
     const response = await fetch(`${API_BASE_URL}/session/whoami`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Session Context Error");
-    return response.json();
+    return handleResponse(response, "Session Context Error");
   },
 
   // --- Companies ---
   getCompanies: async () => {
     const response = await fetch(`${API_BASE_URL}/companies/`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Failed to fetch companies");
-    return response.json();
+    return handleResponse(response, "Failed to fetch companies");
   },
 
   getPublicCompanies: async () => {
     const response = await fetch(`${API_BASE_URL}/companies/public`);
-    if (!response.ok) throw new Error("Failed to fetch public companies");
-    return response.json();
+    return handleResponse(response, "Failed to fetch public companies");
   },
 
   onboardCompany: async (data) => {
@@ -42,8 +52,7 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Onboarding failed");
-    return response.json();
+    return handleResponse(response, "Onboarding failed");
   },
   createCompany: async (data) => {
     // Alias for onboarding a new company tenant
@@ -56,14 +65,12 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Update failed");
-    return response.json();
+    return handleResponse(response, "Update failed");
   },
 
   getSettings: async (companyId) => {
     const response = await fetch(`${API_BASE_URL}/companies/${companyId}/settings`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Failed to fetch settings");
-    return response.json();
+    return handleResponse(response, "Failed to fetch settings");
   },
 
   updateSettings: async (companyId, threshold) => {
@@ -71,22 +78,19 @@ export const procurementApi = {
       method: "PATCH",
       headers: getHeaders(),
     });
-    if (!response.ok) throw new Error("Update failed");
-    return response.json();
+    return handleResponse(response, "Update failed");
   },
 
   // --- Procurement ---
   getRequests: async (skip = 0, limit = 20) => {
     const response = await fetch(`${API_BASE_URL}/requests/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Unauthorized/Forbidden Context");
-    const data = await response.json();
+    const data = await handleResponse(response, "Unauthorized/Forbidden Context");
     return data.items || data;
   },
 
   getRequest: async (id) => {
     const response = await fetch(`${API_BASE_URL}/requests/${id}`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Request not found in this tenant.");
-    return response.json();
+    return handleResponse(response, "Request not found in this tenant.");
   },
 
   getAuditLogs: async (id) => {
@@ -106,8 +110,7 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Update failed");
-    return response.json();
+    return handleResponse(response, "Update failed");
   },
 
   createRequest: async (data) => {
@@ -116,11 +119,7 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Creation failed");
-    }
-    return response.json();
+    return handleResponse(response, "Creation failed");
   },
 
   transitionStatus: async (requestId, action, notes) => {
@@ -129,18 +128,13 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify({ action: action || "Transition", notes: notes || undefined }),
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Transition failed: Role or Policy check error.");
-    }
-    return response.json();
+    return handleResponse(response, "Transition failed: Role or Policy check error.");
   },
 
   // --- Vendors ---
   getVendors: async () => {
     const response = await fetch(`${API_BASE_URL}/vendors/`, { headers: getHeaders() });
-    if (!response.ok) throw new Error("Failed to fetch vendors");
-    return response.json();
+    return handleResponse(response, "Failed to fetch vendors");
   },
 
   createVendor: async (data) => {
@@ -149,24 +143,23 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to register vendor");
-    return response.json();
+    return handleResponse(response, "Failed to register vendor");
   },
 
   getDashboardStats: async () => {
     const response = await fetch(`${API_BASE_URL}/dashboard/stats`, { headers: getHeaders() });
-    return response.json();
+    return handleResponse(response, "Failed to fetch stats");
   },
 
   getRecentAuditLogs: async () => {
     const response = await fetch(`${API_BASE_URL}/audit/recent`, { headers: getHeaders() });
-    return response.json();
+    return handleResponse(response, "Failed to fetch logs");
   },
 
   // --- Petty Cash ---
   getPettyCash: async () => {
     const response = await fetch(`${API_BASE_URL}/petty-cash/`, { headers: getHeaders() });
-    return response.json();
+    return handleResponse(response, "Failed to fetch petty cash");
   },
 
   createPettyCash: async (data) => {
@@ -175,7 +168,7 @@ export const procurementApi = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    return response.json();
+    return handleResponse(response, "Petty Cash submission failed");
   },
 
   approvePettyCash: async (pcId) => {
