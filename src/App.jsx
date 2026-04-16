@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
-import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Search, Wallet, ChevronDown, LogOut, Shield, UserPlus } from 'lucide-react'
+import { LayoutDashboard, FileText, Users, CheckSquare, Settings, Menu, X, Plus, Search, Wallet, ChevronDown, LogOut, Shield, UserPlus, Bell, Clock, CheckCircle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { procurementApi } from './services/api'
 
@@ -49,6 +49,8 @@ function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("currentUserId"))
   const [refreshKey, setRefreshKey] = useState(Date.now())
   const [notifications, setNotifications] = useState({ approvals: 0, users: 0 })
+  const [unreadNotifications, setUnreadNotifications] = useState([])
+  const [isNotiOpen, setIsNotiOpen] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
@@ -103,10 +105,26 @@ function AppContent() {
   const fetchNotifications = async () => {
     try {
       const stats = await procurementApi.getDashboardStats();
+      const list = await procurementApi.getNotifications();
       setNotifications({
           approvals: stats.pending || 0,
           users: 0 
       });
+      setUnreadNotifications(list.filter(n => !n.is_read));
+    } catch (err) { console.error(err); }
+  }
+
+  const markNotificationRead = async (id) => {
+    try {
+      await procurementApi.markNotificationRead(id);
+      fetchNotifications();
+    } catch (err) { console.error(err); }
+  }
+
+  const markAllRead = async () => {
+    try {
+      await procurementApi.markAllNotificationsRead();
+      fetchNotifications();
     } catch (err) { console.error(err); }
   }
 
@@ -397,6 +415,91 @@ function AppContent() {
                   }}
                 />
               </div>
+
+              {/* Notification Bell */}
+              <div style={{ position: 'relative' }}>
+                <button 
+                  onClick={() => setIsNotiOpen(!isNotiOpen)}
+                  style={{ 
+                    width: 40, height: 40, borderRadius: 'var(--radius-xl)', border: 'none',
+                    background: 'var(--surface-container-low)', cursor: 'pointer',
+                    color: unreadNotifications.length > 0 ? 'var(--primary)' : 'var(--outline)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-container-high)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--surface-container-low)'}
+                >
+                  <Bell size={20} />
+                  {unreadNotifications.length > 0 && (
+                    <span style={{ 
+                      position: 'absolute', top: 8, right: 8, 
+                      width: 10, height: 10, borderRadius: '50%', 
+                      background: 'var(--error)', border: '2px solid white'
+                    }} />
+                  )}
+                </button>
+
+                {/* Dropdown */}
+                <AnimatePresence>
+                  {isNotiOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      style={{
+                        position: 'absolute', top: 50, right: 0, width: 320, 
+                        background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(16px)',
+                        borderRadius: 'var(--radius-2xl)', border: '1px solid var(--outline-variant-low)',
+                        boxShadow: '0 12px 32px rgba(25, 28, 30, 0.12)', zIndex: 200, padding: '1rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
+                        <h4 style={{ fontFamily: 'var(--font-headline)', fontSize: '0.925rem', fontWeight: 800 }}>Notifications</h4>
+                        {unreadNotifications.length > 0 && (
+                          <button 
+                            onClick={markAllRead}
+                            style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+                        {unreadNotifications.length === 0 ? (
+                          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--outline)' }}>
+                            <CheckCircle size={32} style={{ marginBottom: '0.5rem', opacity: 0.3 }} />
+                            <p style={{ fontSize: '0.875rem' }}>All caught up!</p>
+                          </div>
+                        ) : (
+                          unreadNotifications.map(n => (
+                            <div 
+                              key={n.id} 
+                              onClick={() => markNotificationRead(n.id)}
+                              style={{ 
+                                padding: '0.875rem', borderRadius: 'var(--radius-lg)', 
+                                background: 'var(--surface-container-low)', cursor: 'pointer',
+                                transition: 'all 0.2s', border: '1px solid transparent'
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = 'var(--primary-fixed)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-container-low)'; e.currentTarget.style.borderColor = 'transparent'; }}
+                            >
+                              <p style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--on-surface)', marginBottom: '0.25rem', lineHeight: 1.4 }}>
+                                {n.message}
+                              </p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--outline)', fontSize: '0.7rem' }}>
+                                <Clock size={12} />
+                                <span>{new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               <div style={{ 
                 width: 36, height: 36, borderRadius: 'var(--radius-pill)', overflow: 'hidden',
                 background: 'var(--primary-fixed)', display: 'flex', alignItems: 'center', justifyContent: 'center',

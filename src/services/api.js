@@ -295,5 +295,27 @@ export const procurementApi = {
       throw new Error(err.detail || "File Upload Failed");
     }
     return response.json();
+  },
+
+  // --- Notifications ---
+  getNotifications: async (limit = 50) => {
+    const response = await fetch(`${API_BASE_URL}/notifications/?limit=${limit}`, { headers: getHeaders() });
+    return handleResponse(response, "Failed to fetch notifications");
+  },
+
+  markNotificationRead: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      method: "POST",
+      headers: getHeaders(),
+    });
+    return handleResponse(response, "Failed to update notification");
+  },
+
+  markAllNotificationsRead: async () => {
+    const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: "POST",
+      headers: getHeaders(),
+    });
+    return handleResponse(response, "Failed to update all notifications");
   }
 }

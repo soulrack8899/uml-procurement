@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -17,7 +17,7 @@ from models import (
     auth_engine, procurement_engine, create_db_and_tables, 
     ProcurementRequest, LineItem, FileMetadata, AuditLog, StatusEnum, 
     UserRole, Company, CompanySettings, PettyCash, PettyCashStatus, 
-    User, TenantAccess, Vendor
+    User, TenantAccess, Vendor, AppNotification
 )
 from services.po_generator import generate_po_pdf
 from pydantic import BaseModel
@@ -93,7 +93,58 @@ def send_approval_email(to_email: str, name: str, password: Optional[str] = None
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
 
-# --- Schemas ---
+def send_notification_email(to_email: str, subject: str, message_body: str):
+    """Background task to send notification emails via SMTP."""
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_username = os.getenv("SMTP_USERNAME")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_from = os.getenv("SMTP_FROM", smtp_username or "noreply@procusure.com")
+    
+    if not smtp_server or not smtp_username or not smtp_password:
+        logger.info(f"--- MOCK EMAIL TO {to_email} ---")
+        logger.info(f"Subject: {subject}")
+        logger.info(f"Body: {message_body}")
+        return
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = smtp_from
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(message_body, 'html'))
+
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_username, smtp_password)
+            server.send_message(msg)
+        logger.info(f"Notification email sent to {to_email}")
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {e}")
+
+def trigger_notification(
+    recipient_ids: List[int], 
+    company_id: int, 
+    message: str, 
+    email_subject: str = None, 
+    email_body: str = None, 
+    background_tasks: BackgroundTasks = None
+):
+    """Creates in-app notification records and triggers background emails."""
+    with Session(procurement_engine) as b_session:
+        with Session(auth_engine) as auth_session:
+            for uid in recipient_ids:
+                # 1. Create In-App Notification
+                notif = AppNotification(user_id=uid, company_id=company_id, message=message)
+                b_session.add(notif)
+                
+                # 2. Trigger Email if background_tasks provided
+                if background_tasks and email_subject and email_body:
+                    user = auth_session.get(User, uid)
+                    if user and user.email:
+                        background_tasks.add_task(send_notification_email, user.email, email_subject, email_body)
+            
+            b_session.commit()
 class LineItemCreate(BaseModel):
     description: str
     quantity: int
@@ -524,7 +575,7 @@ def list_requests(
     }
 
 @app.post("/requests/")
-def create_request(data: RequestCreate, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+def create_request(data: RequestCreate, background_tasks: BackgroundTasks, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     if not context.get('company'):
         raise HTTPException(status_code=400, detail="A valid company must be selected to perform this action. If you are a Global Admin, please select a workplace.")
     
@@ -559,6 +610,21 @@ def create_request(data: RequestCreate, context: dict = Depends(get_active_sessi
     b_session.commit()
     b_session.refresh(new_req)
     
+    # 6. Trigger Notification for Managers
+    try:
+        manager_reqs = b_session.exec(select(TenantAccess.user_id).where(TenantAccess.company_id == context['company'].id, TenantAccess.role == UserRole.MANAGER)).all()
+        if manager_reqs:
+            trigger_notification(
+                recipient_ids=manager_reqs,
+                company_id=context['company'].id,
+                message=f"New procurement request pending approval: {new_req.title} (${new_req.total_amount})",
+                email_subject="ProcuSure: Action Required - New Procurement Request",
+                email_body=f"<p>A new procurement request has been submitted for your approval.</p><p><strong>Title:</strong> {new_req.title}<br><strong>Amount:</strong> ${new_req.total_amount}</p>",
+                background_tasks=background_tasks
+            )
+    except Exception as e:
+        logger.error(f"Notification failed: {e}")
+
     # 6. Response with serialization protection
     return jsonable_encoder({
         "id": new_req.id,
@@ -606,7 +672,7 @@ class TransitionRequest(BaseModel):
     notes: Optional[str] = None
 
 @app.post("/requests/{request_id}/transition")
-def transition_request(request_id: int, data: TransitionRequest = None, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+def transition_request(request_id: int, background_tasks: BackgroundTasks, data: TransitionRequest = None, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     req = b_session.get(ProcurementRequest, request_id)
     if not req: raise HTTPException(status_code=404)
 
@@ -689,6 +755,46 @@ def transition_request(request_id: int, data: TransitionRequest = None, context:
         user_name=context['user'].name, user_role=context['active_role'], notes=notes_text
     ))
     b_session.commit()
+
+    # --- Notification Triggers for Transitions ---
+    try:
+        # A. Notify Requesters on status changes
+        if req.status != old_status:
+             trigger_notification(
+                 recipient_ids=[req.created_by],
+                 company_id=req.company_id,
+                 message=f"Request '{req.title}' updated to: {req.status}",
+                 email_subject=f"ProcuSure Update: {req.title}",
+                 email_body=f"<p>Your request has moved to <strong>{req.status}</strong>.</p>",
+                 background_tasks=background_tasks
+             )
+
+        # B. Notify Next Level Approvers
+        if req.status == StatusEnum.PENDING_DIRECTOR:
+             director_ids = b_session.exec(select(TenantAccess.user_id).where(TenantAccess.company_id == req.company_id, TenantAccess.role == UserRole.DIRECTOR)).all()
+             trigger_notification(
+                 recipient_ids=director_ids,
+                 company_id=req.company_id,
+                 message=f"High-value request needs director approval: {req.title} (${req.total_amount})",
+                 email_subject="ProcuSure: Director Approval Required",
+                 email_body=f"<p>A high-value request requires your review.</p><p>Title: {req.title}<br>Amount: ${req.total_amount}</p>",
+                 background_tasks=background_tasks
+             )
+        
+        # C. Notify Finance on PO Issued
+        if req.status == StatusEnum.PO_ISSUED:
+             finance_ids = b_session.exec(select(TenantAccess.user_id).where(TenantAccess.company_id == req.company_id, TenantAccess.role == UserRole.FINANCE)).all()
+             trigger_notification(
+                 recipient_ids=finance_ids,
+                 company_id=req.company_id,
+                 message=f"New PO Issued - Payment processing required: {req.title}",
+                 email_subject="ProcuSure: PO Issued - Action Required",
+                 email_body=f"<p>A new PO has been issued for request '{req.title}'. Please prepare for payment processing.</p>",
+                 background_tasks=background_tasks
+             )
+    except Exception as e:
+        logger.error(f"Transition notification error: {e}")
+
     return {"status": "ok", "new_status": req.status}
 
 
@@ -1139,6 +1245,49 @@ async def upload_file(file: UploadFile = File(...), context: dict = Depends(get_
         "filename": unique_name,
         "original_name": file.filename
     }
+
+# --- Notifications API ---
+
+@app.get("/notifications/", response_model=List[AppNotification])
+def list_notifications(limit: int = 50, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    """Fetch unread notifications for the active user in the current company context."""
+    user_id = context['user'].id
+    cid = context['company'].id if context['company'] else None
+    
+    query = select(AppNotification).where(AppNotification.user_id == user_id)
+    if cid:
+        query = query.where(AppNotification.company_id == cid)
+    
+    query = query.order_by(AppNotification.created_at.desc()).limit(limit)
+    return b_session.exec(query).all()
+
+@app.post("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    notif = b_session.get(AppNotification, notification_id)
+    if not notif or notif.user_id != context['user'].id:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    notif.is_read = True
+    b_session.add(notif)
+    b_session.commit()
+    return {"status": "success"}
+
+@app.post("/notifications/read-all")
+def mark_all_notifications_read(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    uid = context['user'].id
+    cid = context['company'].id if context['company'] else None
+    
+    query = select(AppNotification).where(AppNotification.user_id == uid, AppNotification.is_read == False)
+    if cid:
+        query = query.where(AppNotification.company_id == cid)
+        
+    notifications = b_session.exec(query).all()
+    for n in notifications:
+        n.is_read = True
+        b_session.add(n)
+        
+    b_session.commit()
+    return {"status": "success", "count": len(notifications)}
 
 if __name__ == "__main__":
     import uvicorn
