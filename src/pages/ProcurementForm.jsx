@@ -207,7 +207,7 @@ const ProcurementForm = () => {
                           <div 
                             key={v.id} 
                             onClick={() => {
-                              setVendor({ name: v.name, id: `V-${v.id}` })
+                              setVendor({ name: v.name, id: v.vendor_id || `V-${v.id}` })
                               setShowVendorDropdown(false)
                             }}
                             className="vendor-suggestion-item"

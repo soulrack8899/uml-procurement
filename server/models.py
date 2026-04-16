@@ -141,6 +141,7 @@ class PettyCash(SQLModel, table=True):
 class Vendor(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(foreign_key="company.id")
+    vendor_id: Optional[str] = Field(default=None, index=True)
     name: str
     vendor_type: str
     location: Optional[str] = None # Keeping for legacy/compatibility if needed, but primary is detailed address

@@ -215,6 +215,14 @@ def on_startup():
         except Exception:
             pass
 
+        # Add vendor_id to vendor if missing
+        try:
+            conn.execute(text("ALTER TABLE vendor ADD COLUMN vendor_id TEXT"))
+            conn.commit()
+            logger.info("Sync: Added vendor_id column to vendor.")
+        except Exception:
+            pass
+
     logger.info("Database schema verification and table creation complete.")
 
 # Middleware

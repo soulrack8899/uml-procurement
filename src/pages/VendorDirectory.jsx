@@ -12,6 +12,7 @@ const VendorDirectory = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [newVendor, setNewVendor] = useState({
     name: '',
+    vendor_id: '',
     vendor_type: '',
     location: '',
     address: '',
@@ -101,7 +102,7 @@ const VendorDirectory = () => {
       await procurementApi.createVendor(newVendor)
       setShowRegister(false)
       setNewVendor({
-        name: '', vendor_type: '', location: '', contact: '', rating: 5.0,
+        name: '', vendor_id: '', vendor_type: '', location: '', contact: '', rating: 5.0,
         address: '', city: '', state: '', postal_code: '', country: 'Malaysia', comments: ''
       })
       setAddressQuery('')
@@ -181,7 +182,10 @@ const VendorDirectory = () => {
               <div style={{ marginBottom: '2.5rem' }}>
                 <div style={{ width: 80, height: 80, background: 'var(--primary)', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '2rem', marginBottom: '1.5rem' }}>{selectedVendor.name[0]}</div>
                 <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '2rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>{selectedVendor.name}</h2>
-                <span style={{ padding: '4px 12px', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>{selectedVendor.vendor_type}</span>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+                  <span style={{ padding: '4px 12px', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase' }}>{selectedVendor.vendor_type}</span>
+                  <span style={{ padding: '4px 12px', background: 'var(--primary-container)', borderRadius: 'var(--radius-pill)', fontSize: '0.75rem', fontWeight: 900, color: 'var(--on-primary-container)' }}>{selectedVendor.vendor_id || `ID: ${selectedVendor.id}`}</span>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '3rem' }}>
@@ -231,14 +235,18 @@ const VendorDirectory = () => {
               <p style={{ fontSize: '0.875rem', color: 'var(--outline)', marginBottom: '2rem' }}>Register a new supplier to the procurement network.</p>
 
               <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '1.5rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Company Name</label>
                     <input required value={newVendor.name} onChange={e => setNewVendor({ ...newVendor, name: e.target.value })} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Vendor Type / Category</label>
-                    <input required value={newVendor.vendor_type} onChange={e => setNewVendor({ ...newVendor, vendor_type: e.target.value })} placeholder="e.g. Lab Equipment, IT Services" style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
+                    <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Vendor ID</label>
+                    <input required placeholder="e.g. V-001" value={newVendor.vendor_id} onChange={e => setNewVendor({ ...newVendor, vendor_id: e.target.value })} style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 900, color: 'var(--primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.5rem', color: 'var(--outline)' }}>Category</label>
+                    <input required value={newVendor.vendor_type} onChange={e => setNewVendor({ ...newVendor, vendor_type: e.target.value })} placeholder="e.g. IT Services" style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--outline-variant)', fontWeight: 700 }} />
                   </div>
                 </div>
 
@@ -391,7 +399,10 @@ const VendorDirectory = () => {
 
             <div>
               <h3 style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)', letterSpacing: '-0.01em' }}>{vendor.name}</h3>
-              <span style={{ display: 'inline-block', padding: '0.25rem 0.75rem', background: 'var(--primary-container)', color: 'var(--on-primary-container)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', borderRadius: 'var(--radius-pill)', marginTop: '0.5rem' }}>{vendor.vendor_type}</span>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <span style={{ display: 'inline-block', padding: '0.25rem 0.75rem', background: 'var(--primary-container)', color: 'var(--on-primary-container)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', borderRadius: 'var(--radius-pill)' }}>{vendor.vendor_type}</span>
+                <span style={{ display: 'inline-block', padding: '0.25rem 0.75rem', background: 'var(--surface-container-high)', color: 'var(--outline)', fontSize: '0.7rem', fontWeight: 900, border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-pill)' }}>{vendor.vendor_id || `ID: ${vendor.id}`}</span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem', color: 'var(--on-surface-variant)' }}>
