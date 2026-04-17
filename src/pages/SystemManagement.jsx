@@ -135,6 +135,7 @@ const SystemManagement = () => {
           <div onClick={() => setActiveTab('USERS')} style={S.tab(activeTab === 'USERS')}>Directory (Users)</div>
           <div onClick={() => setActiveTab('COMPANIES')} style={S.tab(activeTab === 'COMPANIES')}>Entities (Companies)</div>
           <div onClick={() => setActiveTab('STATS')} style={S.tab(activeTab === 'STATS')}>System Health</div>
+          <div onClick={() => setActiveTab('CHANGELOG')} style={S.tab(activeTab === 'CHANGELOG')}>System Updates</div>
       </div>
 
       {/* Main Content Area */}
@@ -249,6 +250,65 @@ const SystemManagement = () => {
                       <h2 style={{ fontSize: '1.75rem', fontWeight: 900, marginTop: '0.5rem' }}>{s.val}</h2>
                   </div>
               ))}
+          </div>
+      )}
+      
+      {activeTab === 'CHANGELOG' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <div className="surface-card" style={{ padding: '2.5rem', border: 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '3rem' }}>
+                      <div style={{ padding: '0.5rem 1rem', background: 'var(--primary-container)', color: 'white', borderRadius: 'var(--radius-sm)', fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase' }}>Current Release</div>
+                      <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>v0.2.0-STABLE • Batch 04/17</h2>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '3rem' }}>
+                      <div>
+                          <h3 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Database size={14} /> Core Performance Fixes
+                          </h3>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                              {[
+                                  { title: "Hard Schema Sync", desc: "Resolved UndefinedColumn errors on startup." },
+                                  { title: "Self-Healing DB", desc: "Auto-provisioning of audit logs and rejection fields." },
+                                  { title: "Robust Dashboard Stats", desc: "Fixed crashes on null expenditure data." }
+                              ].map((f, i) => (
+                                  <div key={i} style={{ padding: '1rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-sm)' }}>
+                                      <p style={{ fontSize: '0.875rem', fontWeight: 800, marginBottom: '2px' }}>{f.title}</p>
+                                      <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{f.desc}</p>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+
+                      <div>
+                          <h3 style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--outline)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <RefreshCw size={14} /> Feature Improvements
+                          </h3>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                              {[
+                                  { title: "Notification Engine", desc: "Added real-time alert API & notification hub." },
+                                  { title: "Authentication Refresh", desc: "Implemented password recovery and SHA-256 fix." },
+                                  { title: "Verification Suite", desc: "Added new diagnostic scripts for SMTP and DB." }
+                              ].map((f, i) => (
+                                  <div key={i} style={{ padding: '1rem', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-sm)' }}>
+                                      <p style={{ fontSize: '0.875rem', fontWeight: 800, marginBottom: '2px' }}>{f.title}</p>
+                                      <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>{f.desc}</p>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+
+                  <div style={{ marginTop: '4rem', padding: '2rem', borderTop: '1px solid var(--outline-variant-low)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--outline)' }}>System version maintained by ProcuSure Core Engineering.</p>
+                      <button 
+                        onClick={() => window.open('/REPORT_2026_04_17.md')}
+                        style={{ border: 'none', background: 'none', color: 'var(--primary)', fontWeight: 800, fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                         View Full Report <ArrowRight size={16} />
+                      </button>
+                  </div>
+              </div>
           </div>
       )}
 
