@@ -1,5 +1,5 @@
 # ProcuSure: AI Context Memory Block
-**Last Updated:** April 17, 2026
+**Last Updated:** April 19, 2026
 
 ## 1. Project Identity
 - **Name:** ProcuSure
@@ -24,11 +24,13 @@
 - **Vendors:** Central directory with verification states.
 - **Notifications:** In-app hub + SMTP Email alerts.
 - **Auditing:** Immutable live audit feed for all transitions.
+- **Pagination:** Global `{total, items}` skip/limit pagination on list endpoints.
+- **Security Hub:** Random 12-character secure provisioning passwords via `secrets`.
 
 ## 5. Ongoing / Persistent State
 - **Database:** Auto-syncs missing columns on startup.
 - **Settings:** Active financial thresholds (e.g., > RM 5,000 requiring Director approval).
-- **Release Version:** v0.2.0-STABLE.
+- **Release Version:** v0.2.1-STABLE.
 
 ## 6. Development Instructions
 - **The "No-Line" Rule:** Do not use borders; use background color shifts for sectioning.
