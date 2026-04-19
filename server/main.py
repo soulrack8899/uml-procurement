@@ -229,7 +229,7 @@ def on_startup():
             conn.commit()
             logger.info("Sync: Added rejection_reason column to procurementrequest.")
         except Exception as e:
-            if "already exists" in str(e).lower():
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
                 logger.warning("Sync: Column rejection_reason already exists in procurementrequest.")
             else:
                 logger.error(f"Critical DB sync failed (rejection_reason): {str(e)}")
@@ -241,7 +241,7 @@ def on_startup():
             conn.commit()
             logger.info("Sync: Added ledger_url column to pettycash.")
         except Exception as e:
-            if "already exists" in str(e).lower():
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
                 logger.warning("Sync: Column ledger_url already exists in pettycash.")
             else:
                 logger.error(f"Critical DB sync failed (ledger_url): {str(e)}")
@@ -253,7 +253,7 @@ def on_startup():
             conn.commit()
             logger.info("Sync: Added vendor_id column to vendor.")
         except Exception as e:
-            if "already exists" in str(e).lower():
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
                 logger.warning("Sync: Column vendor_id already exists in vendor.")
             else:
                 logger.error(f"Critical DB sync failed (vendor_id): {str(e)}")
@@ -398,7 +398,7 @@ async def custom_500_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal Server Error. Our team has been notified. Please try again later."},
-        headers={"Access-Control-Allow-Origin": "*"}
+        headers={"Access-Control-Allow-Origin": "http://localhost:3000"} # Defaulting to safe origin for error responses
     )
 
 # --- Session Dependencies ---
