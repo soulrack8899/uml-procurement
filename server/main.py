@@ -1,4 +1,5 @@
 import os
+import secrets
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request, BackgroundTasks, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -178,7 +179,7 @@ class UserCreate(BaseModel):
     name: str
     email: str
     phone_number: Optional[str] = None
-    password: str = "password123"
+    password: Optional[str] = None
     company_id: Optional[int] = None
     role: UserRole = UserRole.REQUESTER
     roles: Optional[List[UserRole]] = None
@@ -916,10 +917,11 @@ def onboard_company(company: Company, context: dict = Depends(get_active_session
     existing_user = auth_session.exec(select(User).where(User.email == admin_email)).first()
     
     if not existing_user:
+        temp_pass = secrets.token_urlsafe(12)
         new_admin = User(
             name=company.contact_person or "Primary Admin",
             email=admin_email,
-            password=get_password_hash("password123"), # Default password for security
+            password=get_password_hash(temp_pass), # Random secure password
             approval_status="APPROVED",
             is_temporary_password=True
         )
@@ -1138,14 +1140,15 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
     if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
     
     email_clean = data.email.lower().strip()
+    temp_pass = data.password or secrets.token_urlsafe(12)
     user = auth_session.exec(select(User).where(User.email == email_clean)).first()
     if not user:
-        user = User(name=data.name, email=email_clean, password=get_password_hash(data.password), approval_status="APPROVED", is_temporary_password=True, phone_number=data.phone_number)
+        user = User(name=data.name, email=email_clean, password=get_password_hash(temp_pass), approval_status="APPROVED", is_temporary_password=True, phone_number=data.phone_number)
         auth_session.add(user)
         auth_session.commit()
     else:
         # Update existing user
-        user.password = get_password_hash(data.password)
+        user.password = get_password_hash(temp_pass)
         user.is_temporary_password = True
         user.name = data.name
         user.approval_status = "APPROVED"
@@ -1153,7 +1156,7 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
         auth_session.commit()
     
     auth_session.refresh(user)
-    send_approval_email(user.email, user.name, password=data.password)
+    send_approval_email(user.email, user.name, password=temp_pass)
     
     target_co = data.company_id or (context['company'].id if context['company'] else None)
     if target_co:

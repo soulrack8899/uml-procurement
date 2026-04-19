@@ -37,7 +37,7 @@ class User(SQLModel, table=True):
     name: str
     email: str = Field(unique=True, index=True)
     phone_number: Optional[str] = None
-    password: str = Field(default="password123")
+    password: str
     global_role: UserRole = Field(default=UserRole.REQUESTER)
     approval_status: str = Field(default="PENDING")
     is_temporary_password: bool = Field(default=True)
