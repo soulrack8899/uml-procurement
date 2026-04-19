@@ -353,10 +353,15 @@ def on_startup():
                   b_session.commit()
 
 # Middleware
-allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://procure-sure.vercel.app",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # More permissive for the dry run to ensure connectivity
+    allow_origins=allowed_origins,
     allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
