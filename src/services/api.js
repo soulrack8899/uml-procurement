@@ -91,8 +91,7 @@ export const procurementApi = {
   // --- Procurement ---
   getRequests: async (skip = 0, limit = 20) => {
     const response = await fetch(`${API_BASE_URL}/requests/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
-    const data = await handleResponse(response, "Unauthorized/Forbidden Context");
-    return data.items || data;
+    return handleResponse(response, "Unauthorized/Forbidden Context");
   },
 
   getRequest: async (id) => {
@@ -139,8 +138,8 @@ export const procurementApi = {
   },
 
   // --- Vendors ---
-  getVendors: async () => {
-    const response = await fetch(`${API_BASE_URL}/vendors/`, { headers: getHeaders() });
+  getVendors: async (skip = 0, limit = 50) => {
+    const response = await fetch(`${API_BASE_URL}/vendors/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
     return handleResponse(response, "Failed to fetch vendors");
   },
 
@@ -164,8 +163,8 @@ export const procurementApi = {
   },
 
   // --- Petty Cash ---
-  getPettyCash: async () => {
-    const response = await fetch(`${API_BASE_URL}/petty-cash/`, { headers: getHeaders() });
+  getPettyCash: async (skip = 0, limit = 50) => {
+    const response = await fetch(`${API_BASE_URL}/petty-cash/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
     return handleResponse(response, "Failed to fetch petty cash");
   },
 
@@ -250,8 +249,7 @@ export const procurementApi = {
   getUsers: async (skip = 0, limit = 50) => {
     const response = await fetch(`${API_BASE_URL}/users/?skip=${skip}&limit=${limit}`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Unauthorized to access user directory");
-    const data = await response.json();
-    return data.items || data;
+    return response.json();
   },
 
   updateUser: async (userId, data) => {

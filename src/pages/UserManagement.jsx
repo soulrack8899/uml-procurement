@@ -44,7 +44,7 @@ const UserManagement = () => {
     setLoading(true);
     try {
       const userData = await procurementApi.getUsers();
-      setUsers(userData || []);
+      setUsers(userData.items || []);
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error("User Loading Error:", err);

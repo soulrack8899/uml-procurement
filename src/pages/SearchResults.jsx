@@ -23,9 +23,10 @@ const SearchResults = () => {
     const fetchResults = async () => {
         setLoading(true)
         try {
-            const data = await procurementApi.getRequests()
+            const data = await procurementApi.getRequests(0, 100) // Increase limit for search visibility
+            const items = data.items || []
             // Client-side search for now
-            const filtered = data.filter(r => 
+            const filtered = items.filter(r => 
                 r.title?.toLowerCase().includes(query.toLowerCase()) ||
                 r.vendor_name?.toLowerCase().includes(query.toLowerCase()) ||
                 r.id.toString() === query

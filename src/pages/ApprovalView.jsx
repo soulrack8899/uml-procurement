@@ -15,8 +15,9 @@ const ApprovalView = () => {
   const fetchData = async () => {
     try {
       const data = await procurementApi.getRequests()
+      const items = data.items || []
       // Filter for requests that the current role can actually act on
-      const pending = data.filter(r => {
+      const pending = items.filter(r => {
         if (!activeRole) return false
         
         // Use clean role strings

@@ -22,7 +22,7 @@ const PettyCashDashboard = () => {
         procurementApi.getPettyCash(),
         currentCompany ? procurementApi.getSettings(currentCompany.id).catch(() => null) : null
       ])
-      setRequests(data)
+      setRequests(data.items || [])
       if (settings && settings.approval_threshold) {
         setPettyCashLimit(settings.approval_threshold)
       }

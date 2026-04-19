@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header, Request, BackgroundTasks, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn.error")
 from datetime import datetime
-from sqlmodel import Session, select, SQLModel
+from sqlmodel import Session, select, SQLModel, func
 from models import (
     auth_engine, procurement_engine, create_db_and_tables, 
     ProcurementRequest, LineItem, FileMetadata, AuditLog, StatusEnum, 
@@ -627,19 +627,24 @@ def whoami(context: dict = Depends(get_active_session_context), b_session: Sessi
 
 @app.get("/requests/")
 def list_requests(
-    skip: int = 0, 
-    limit: int = 20, 
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=200),
     context: dict = Depends(get_active_session_context), 
     b_session: Session = Depends(get_business_session)
 ):
+    # Base query for items
     query = select(ProcurementRequest).order_by(ProcurementRequest.created_at.desc())
+    # Base query for count
+    count_query = select(func.count(ProcurementRequest.id))
+    
     if context['active_role'] != UserRole.GLOBAL_ADMIN:
         query = query.where(ProcurementRequest.company_id == context['company'].id)
+        count_query = count_query.where(ProcurementRequest.company_id == context['company'].id)
     
-    # Count total for pagination
-    total = len(b_session.exec(query).all())
+    # Efficient count
+    total = b_session.exec(count_query).one()
     
-    # Apply pagination
+    # Apply pagination and fetch results
     results = b_session.exec(query.offset(skip).limit(limit)).all()
     
     return {
@@ -1007,27 +1012,36 @@ def update_company_settings(company_id: int, threshold: float, context: dict = D
 
 @app.get("/users/")
 def list_users(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
     context: dict = Depends(get_active_session_context), 
     auth_session: Session = Depends(get_auth_session), 
     b_session: Session = Depends(get_business_session)
 ):
     if context['active_role'] not in [UserRole.GLOBAL_ADMIN, UserRole.ADMIN]: raise HTTPException(status_code=403)
     
-    # Check if user is Global Admin by checking the string value of their active role
+    # Check if user is Global Admin
     is_global_admin = str(context['active_role']) == str(UserRole.GLOBAL_ADMIN.value) or context['active_role'] == UserRole.GLOBAL_ADMIN
     
     if is_global_admin:
-        users = auth_session.exec(select(User)).all()
+        # Count total
+        total = auth_session.exec(select(func.count(User.id))).one()
+        # Fetch paginated users
+        users = auth_session.exec(select(User).offset(skip).limit(limit)).all()
     else:
         # Get only users in THIS company
         cid = context['company'].id if context['company'] else None
         if not cid:
-             return [] # Non-admins see nothing if no company context
-        company_access = b_session.exec(select(TenantAccess).where(TenantAccess.company_id == cid)).all()
-        target_user_ids = [a.user_id for a in company_access]
-        users = auth_session.exec(select(User).where(User.id.in_(target_user_ids))).all()
+             return {"items": [], "total": 0, "skip": skip, "limit": limit}
+        
+        # Count total in this company
+        company_access_query = select(TenantAccess.user_id).where(TenantAccess.company_id == cid)
+        target_user_ids_query = select(User.id).where(User.id.in_(company_access_query))
+        total_query = select(func.count()).select_from(target_user_ids_query.subquery())
+        total = auth_session.exec(total_query).one()
+
+        # Fetch paginated users in this company
+        users = auth_session.exec(select(User).where(User.id.in_(company_access_query)).offset(skip).limit(limit)).all()
 
     result = []
     for u in users:
@@ -1044,7 +1058,6 @@ def list_users(
         elif str(u.global_role) == str(UserRole.GLOBAL_ADMIN.value) or u.global_role == UserRole.GLOBAL_ADMIN:
             role_label = "GLOBAL ADMIN"
         else:
-            # Global Context view
             role_label = u.global_role.value if hasattr(u.global_role, 'value') else str(u.global_role)
 
         result.append({
@@ -1058,12 +1071,9 @@ def list_users(
             "companies": len(set([t.company_id for t in tenants]))
         })
     
-    # Apply manual limit since we built the list manually for role calculation complex logic
-    paginated_result = result[skip : skip + limit]
-    
     return {
-        "items": paginated_result,
-        "total": len(result),
+        "items": result,
+        "total": total,
         "skip": skip,
         "limit": limit
     }
@@ -1173,9 +1183,17 @@ def onboard_user(data: UserCreate, context: dict = Depends(get_active_session_co
 
 
 
-@app.get("/petty-cash/", response_model=List[PettyCash])
-def list_petty_cash(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
-    return b_session.exec(select(PettyCash).where(PettyCash.company_id == context['company'].id)).all()
+@app.get("/petty-cash/")
+def list_petty_cash(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    context: dict = Depends(get_active_session_context), 
+    b_session: Session = Depends(get_business_session)
+):
+    query = select(PettyCash).where(PettyCash.company_id == context['company'].id)
+    total = b_session.exec(select(func.count()).select_from(query.subquery())).one()
+    results = b_session.exec(query.offset(skip).limit(limit)).all()
+    return {"total": total, "items": results, "skip": skip, "limit": limit}
 
 @app.post("/petty-cash/", response_model=PettyCash)
 def create_petty_cash(pc: PettyCash, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
@@ -1212,9 +1230,17 @@ def disburse_petty_cash(pc_id: int, context: dict = Depends(get_active_session_c
     b_session.commit()
     return {"status": "ok"}
 
-@app.get("/vendors/", response_model=List[Vendor])
-def list_vendors(context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
-    return b_session.exec(select(Vendor).where(Vendor.company_id == context['company'].id)).all()
+@app.get("/vendors/")
+def list_vendors(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    context: dict = Depends(get_active_session_context), 
+    b_session: Session = Depends(get_business_session)
+):
+    query = select(Vendor).where(Vendor.company_id == context['company'].id)
+    total = b_session.exec(select(func.count()).select_from(query.subquery())).one()
+    results = b_session.exec(query.offset(skip).limit(limit)).all()
+    return {"total": total, "items": results, "skip": skip, "limit": limit}
 
 @app.post("/vendors/", response_model=Vendor)
 def create_vendor(v: Vendor, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):

@@ -54,7 +54,7 @@ const VendorDirectory = () => {
     setLoading(true)
     try {
       const data = await procurementApi.getVendors()
-      setVendors(data)
+      setVendors(data.items || [])
     } catch (err) {
       console.error(err)
     } finally {
@@ -117,9 +117,10 @@ const VendorDirectory = () => {
     setFetchingOrders(true)
     try {
       // Fetch procurement history for this vendor
-      const orders = await procurementApi.getRequests()
+      const data = await procurementApi.getRequests()
+      const items = data.items || []
       // Use loose linking to filter orders by vendor name or id if available
-      const filtered = orders.filter(o => o.vendor_id === vendor.id || o.vendor_name === vendor.name)
+      const filtered = items.filter(o => o.vendor_id === vendor.id || o.vendor_name === vendor.name)
       setVendorOrders(filtered)
     } catch (err) {
       console.error('Failed to fetch vendor history', err)

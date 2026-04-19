@@ -29,9 +29,9 @@ const Dashboard = () => {
       // Filter requests if role is REQUESTER
       if (activeRole === 'REQUESTER') {
         const myUserId = parseInt(localStorage.getItem("currentUserId") || "1")
-        setRequests(reqData.filter(r => r.created_by === myUserId))
+        setRequests((reqData.items || []).filter(r => r.created_by === myUserId))
       } else {
-        setRequests(reqData)
+        setRequests(reqData.items || [])
       }
 
       setStats(statsData)
