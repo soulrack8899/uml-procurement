@@ -183,6 +183,11 @@ class UserCreate(BaseModel):
     role: UserRole = UserRole.REQUESTER
     roles: Optional[List[UserRole]] = None
 
+class CompanyUpdate(BaseModel):
+    domain: Optional[str] = None
+    email_address: Optional[str] = None
+    logo_url: Optional[str] = None
+
 
 app = FastAPI(title="UMLAB SaaS Master API")
 
@@ -456,6 +461,40 @@ def get_active_session_context(
 
 @app.get("/")
 def read_root(): return {"status": "ok", "service": "ProcuSure Multi-DB API"}
+
+@app.patch("/companies/{id}", response_model=Company)
+def update_company(
+    id: int,
+    data: CompanyUpdate,
+    context: dict = Depends(get_active_session_context),
+    b_session: Session = Depends(get_business_session)
+):
+    # RBAC check: only Global Admin or Admin of that specific company
+    user = context['user']
+    active_role = context['active_role']
+
+    if user.global_role != UserRole.GLOBAL_ADMIN:
+        if active_role != UserRole.ADMIN:
+             raise HTTPException(status_code=403, detail="Only Admins can update company settings")
+        if context['company'].id != id:
+             raise HTTPException(status_code=403, detail="You can only update your own company")
+    
+    db_company = b_session.get(Company, id)
+    if not db_company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(db_company, key, value)
+    
+    try:
+        b_session.add(db_company)
+        b_session.commit()
+        b_session.refresh(db_company)
+    except Exception as e:
+        b_session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        
+    return db_company
 
 @app.post("/session/register")
 def register_user(data: RegisterRequest, auth_session: Session = Depends(get_auth_session), b_session: Session = Depends(get_business_session)):
