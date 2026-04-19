@@ -18,7 +18,8 @@ from models import (
     auth_engine, procurement_engine, create_db_and_tables, 
     ProcurementRequest, LineItem, FileMetadata, AuditLog, StatusEnum, 
     UserRole, Company, CompanySettings, PettyCash, PettyCashStatus, 
-    User, TenantAccess, Vendor, AppNotification
+    User, TenantAccess, Vendor, AppNotification,
+    fix_postgres_url, DB_URL
 )
 from services.po_generator import generate_po_pdf
 from pydantic import BaseModel
@@ -221,43 +222,41 @@ def on_startup():
         create_db_and_tables()
 
     # 2. Hard Schema Sync for Existing Tables (Manual ALTERS)
-    from sqlalchemy import text
-    with procurement_engine.connect() as conn:
-        # Add rejection_reason to procurementrequest if missing
-        try:
-            conn.execute(text("ALTER TABLE procurementrequest ADD COLUMN rejection_reason TEXT"))
-            conn.commit()
-            logger.info("Sync: Added rejection_reason column to procurementrequest.")
-        except Exception as e:
-            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
-                logger.warning("Sync: Column rejection_reason already exists in procurementrequest.")
-            else:
-                logger.error(f"Critical DB sync failed (rejection_reason): {str(e)}")
-                raise e
-            
-        # Add ledger_url to pettycash if missing
-        try:
-            conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
-            conn.commit()
-            logger.info("Sync: Added ledger_url column to pettycash.")
-        except Exception as e:
-            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
-                logger.warning("Sync: Column ledger_url already exists in pettycash.")
-            else:
-                logger.error(f"Critical DB sync failed (ledger_url): {str(e)}")
-                raise e
+    from sqlalchemy import text, inspect
+    
+    # Use inspector to check for columns - this is cross-DB safe (SQLite & Postgres)
+    try:
+        inspector = inspect(procurement_engine)
+        
+        # Guard: Ensure we don't try to sync if tables don't exist yet
+        tables = inspector.get_table_names()
+        
+        if "procurementrequest" in tables:
+            columns = [c['name'] for c in inspector.get_columns("procurementrequest")]
+            if "rejection_reason" not in columns:
+                with procurement_engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE procurementrequest ADD COLUMN rejection_reason TEXT"))
+                    conn.commit()
+                    logger.info("Sync: Added rejection_reason column to procurementrequest.")
+        
+        if "pettycash" in tables:
+            columns = [c['name'] for c in inspector.get_columns("pettycash")]
+            if "ledger_url" not in columns:
+                with procurement_engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
+                    conn.commit()
+                    logger.info("Sync: Added ledger_url column to pettycash.")
 
-        # Add vendor_id to vendor if missing
-        try:
-            conn.execute(text("ALTER TABLE vendor ADD COLUMN vendor_id TEXT"))
-            conn.commit()
-            logger.info("Sync: Added vendor_id column to vendor.")
-        except Exception as e:
-            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
-                logger.warning("Sync: Column vendor_id already exists in vendor.")
-            else:
-                logger.error(f"Critical DB sync failed (vendor_id): {str(e)}")
-                raise e
+        if "vendor" in tables:
+            columns = [c['name'] for c in inspector.get_columns("vendor")]
+            if "vendor_id" not in columns:
+                with procurement_engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE vendor ADD COLUMN vendor_id TEXT"))
+                    conn.commit()
+                    logger.info("Sync: Added vendor_id column to vendor.")
+                    
+    except Exception as e:
+        logger.warning(f"Manual schema sync skipped or failed: {e}")
 
     logger.info("Database schema verification and table creation complete.")
 
@@ -378,6 +377,8 @@ allowed_origins = [
     "http://localhost:3000",
     "http://localhost:5173",
     "https://procure-sure.vercel.app",
+    "https://uml-procurement-internal.vercel.app",
+    "https://uml-procurement-internal-production.up.railway.app",
 ]
 
 app.add_middleware(
