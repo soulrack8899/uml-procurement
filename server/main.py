@@ -222,21 +222,36 @@ def on_startup():
             conn.execute(text("ALTER TABLE procurementrequest ADD COLUMN rejection_reason TEXT"))
             conn.commit()
             logger.info("Sync: Added rejection_reason column to procurementrequest.")
-        except Exception: pass
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                logger.warning("Sync: Column rejection_reason already exists in procurementrequest.")
+            else:
+                logger.error(f"Critical DB sync failed (rejection_reason): {str(e)}")
+                raise e
             
         # Add ledger_url to pettycash if missing
         try:
             conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
             conn.commit()
             logger.info("Sync: Added ledger_url column to pettycash.")
-        except Exception: pass
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                logger.warning("Sync: Column ledger_url already exists in pettycash.")
+            else:
+                logger.error(f"Critical DB sync failed (ledger_url): {str(e)}")
+                raise e
 
         # Add vendor_id to vendor if missing
         try:
             conn.execute(text("ALTER TABLE vendor ADD COLUMN vendor_id TEXT"))
             conn.commit()
             logger.info("Sync: Added vendor_id column to vendor.")
-        except Exception: pass
+        except Exception as e:
+            if "already exists" in str(e).lower():
+                logger.warning("Sync: Column vendor_id already exists in vendor.")
+            else:
+                logger.error(f"Critical DB sync failed (vendor_id): {str(e)}")
+                raise e
 
     logger.info("Database schema verification and table creation complete.")
 
