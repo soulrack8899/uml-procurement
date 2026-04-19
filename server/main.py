@@ -39,16 +39,15 @@ def get_password_hash(password):
     return pwd_context.hash(pre_hash)
 
 def verify_password(plain_password, hashed_password):
-    if not hashed_password: return False
-    clean_pass = plain_password.strip()
-    pre_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
+    if not hashed_password:
+        return False
     try:
-        if pwd_context.verify(pre_hash, hashed_password): return True
-    except: pass
-    try:
-        if pwd_context.verify(clean_pass, hashed_password): return True
-    except: pass
-    return clean_pass == hashed_password
+        clean_pass = plain_password.strip()
+        pre_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
+        return pwd_context.verify(pre_hash, hashed_password)
+    except Exception:
+        logger.error("Password verification failed")
+        return False
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -190,76 +189,11 @@ app = FastAPI(title="UMLAB SaaS Master API")
 # Startup Logic
 @app.on_event("startup")
 def on_startup():
-    from models import create_db_and_tables, procurement_engine
-    from sqlalchemy import text
-    
-    # 1. Standard Table Creation (for missing tables like AuditLog)
-    create_db_and_tables()
-    
-    # 2. Hard Schema Sync for Existing Tables (adding mission columns)
-    with procurement_engine.connect() as conn:
-        # Add rejection_reason to procurementrequest if missing
-        try:
-            conn.execute(text("ALTER TABLE procurementrequest ADD COLUMN rejection_reason TEXT"))
-            conn.commit()
-            logger.info("Sync: Added rejection_reason column to procurementrequest.")
-        except Exception:
-            # Column likely already exists or table doesn't exist yet
-            pass
-            
-        # Add ledger_url to pettycash if missing
-        try:
-            conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
-            conn.commit()
-            logger.info("Sync: Added ledger_url column to pettycash.")
-        except Exception:
-            pass
-
-        # Add vendor_id to vendor if missing
-        try:
-            conn.execute(text("ALTER TABLE vendor ADD COLUMN vendor_id TEXT"))
-            conn.commit()
-            logger.info("Sync: Added vendor_id column to vendor.")
-        except Exception:
-            pass
-
-    logger.info("Database schema verification and table creation complete.")
-
-# Middleware
-allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # More permissive for the dry run to ensure connectivity
-    allow_credentials=True, 
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
-)
-
-@app.exception_handler(Exception)
-async def custom_500_handler(request: Request, exc: Exception):
-    """Ensure CORS headers are present even on unhandled crashes."""
-    logger.error(f"UNHANDLED SERVER ERROR: {exc}")
-    import traceback
-    traceback.print_exc()
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal Server Error. Our team has been notified. Please try again later."},
-        headers={"Access-Control-Allow-Origin": "*"}
-    )
-
-# --- Session Dependencies ---
-def get_auth_session():
-    with Session(auth_engine) as session: yield session
-
-def get_business_session():
-    with Session(procurement_engine) as session: yield session
-
-@app.on_event("startup")
-def on_startup():
     logger.info("INITIATING DUAL-DATABASE BOOTSTRAP...")
     
-    # Run Migrations Automatically
+    # --- PHASE 1: SCHEMA SYNC (MUST RUN FIRST) ---
+    
+    # 1. Automatic Migrations (Alembic) or Table Creation (SQLModel)
     try:
         logger.info("Running database migrations...")
         import os
@@ -279,9 +213,34 @@ def on_startup():
         logger.error(f"Migration error: {e}")
         # Fallback to simple creation if migrations fail
         create_db_and_tables()
-    
-    # Seeding Logic
+
+    # 2. Hard Schema Sync for Existing Tables (Manual ALTERS)
     from sqlalchemy import text
+    with procurement_engine.connect() as conn:
+        # Add rejection_reason to procurementrequest if missing
+        try:
+            conn.execute(text("ALTER TABLE procurementrequest ADD COLUMN rejection_reason TEXT"))
+            conn.commit()
+            logger.info("Sync: Added rejection_reason column to procurementrequest.")
+        except Exception: pass
+            
+        # Add ledger_url to pettycash if missing
+        try:
+            conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
+            conn.commit()
+            logger.info("Sync: Added ledger_url column to pettycash.")
+        except Exception: pass
+
+        # Add vendor_id to vendor if missing
+        try:
+            conn.execute(text("ALTER TABLE vendor ADD COLUMN vendor_id TEXT"))
+            conn.commit()
+            logger.info("Sync: Added vendor_id column to vendor.")
+        except Exception: pass
+
+    logger.info("Database schema verification and table creation complete.")
+
+    # --- PHASE 2: AUTH DB INIT / SEEDING ---
     with Session(auth_engine) as a_session, Session(procurement_engine) as b_session:
         # 1. Seed Companies in Business DB
         try:
@@ -341,7 +300,9 @@ def on_startup():
                     ),
                 ])
                 b_session.commit()
-        except: b_session.rollback()
+        except Exception as e:
+            logger.error(f"Company Seeding error: {e}")
+            b_session.rollback()
 
         # 2. Seed Master Admin in Auth DB
         master_email = (os.getenv("MASTER_ADMIN_EMAIL") or "pomodorotechco@gmail.com").lower().strip()
@@ -390,6 +351,37 @@ def on_startup():
                   logger.info(f"LINKING UMLAB ADMIN ACCESS...")
                   b_session.add(TenantAccess(user_id=u_admin.id, company_id=umlab.id, role=UserRole.ADMIN))
                   b_session.commit()
+
+# Middleware
+allow_origin_regex = r"https://.*\.vercel\.app|https://.*\.railway\.app|https://procusure\.vercel\.app|http://localhost:.*"
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # More permissive for the dry run to ensure connectivity
+    allow_credentials=True, 
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
+
+@app.exception_handler(Exception)
+async def custom_500_handler(request: Request, exc: Exception):
+    """Ensure CORS headers are present even on unhandled crashes."""
+    logger.error(f"UNHANDLED SERVER ERROR: {exc}")
+    import traceback
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error. Our team has been notified. Please try again later."},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+# --- Session Dependencies ---
+def get_auth_session():
+    with Session(auth_engine) as session: yield session
+
+def get_business_session():
+    with Session(procurement_engine) as session: yield session
+
 
 ROLE_PRIORITY = {
     UserRole.GLOBAL_ADMIN: 100,
