@@ -473,11 +473,19 @@ def register_user(data: RegisterRequest, auth_session: Session = Depends(get_aut
         is_temporary_password=False
     )
     auth_session.add(new_user)
-    auth_session.commit()
-    auth_session.refresh(new_user)
+    try:
+        auth_session.commit()
+        auth_session.refresh(new_user)
+    except Exception as e:
+        auth_session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     
     b_session.add(TenantAccess(user_id=new_user.id, company_id=data.company_id, role=UserRole.REQUESTER))
-    b_session.commit()
+    try:
+        b_session.commit()
+    except Exception as e:
+        b_session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     
     return {"status": "SUCCESS", "user_id": new_user.id}
 
@@ -499,7 +507,11 @@ def forgot_password_request(data: PasswordResetRequest, auth_session: Session = 
     user.password = get_password_hash(new_temp_pass)
     user.is_temporary_password = True
     auth_session.add(user)
-    auth_session.commit()
+    try:
+        auth_session.commit()
+    except Exception as e:
+        auth_session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     
     # Send Email
     subject = "ProcuSure Security: Temporary Password Issued"
@@ -555,7 +567,11 @@ def change_password(data: PasswordChangeRequest, context: dict = Depends(get_act
     user.password = get_password_hash(data.new_password)
     user.is_temporary_password = False
     auth_session.add(user)
-    auth_session.commit()
+    try:
+        auth_session.commit()
+    except Exception as e:
+        auth_session.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     return {"status": "SUCCESS"}
 
 @app.get("/session/whoami")
