@@ -7,7 +7,8 @@ from sqlalchemy import pool
 from alembic import context
 
 # 1. Add the server directory to path so we can import our models
-sys.path.append(os.getcwd())
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
 
 # 2. Import SQLModel and your engines/metadata
 from sqlmodel import SQLModel

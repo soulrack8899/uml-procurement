@@ -20,6 +20,7 @@ class PettyCashStatus(str, Enum):
     SUBMITTED = "SUBMITTED"
     APPROVED = "APPROVED"
     DISBURSED = "DISBURSED"
+    REJECTED = "REJECTED"
 
 class UserRole(str, Enum):
     REQUESTER = "REQUESTER"
@@ -67,6 +68,7 @@ class Company(SQLModel, table=True):
     trading_license: Optional[str] = None
     business_objectives: Optional[str] = None 
     logo_url: Optional[str] = None
+    petty_cash_limit: float = Field(default=5000.0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     settings: "CompanySettings" = Relationship(back_populates="company")
@@ -131,6 +133,7 @@ class PettyCash(SQLModel, table=True):
     description: str = Field(default="Petty Cash Claim")
     ledger_url: Optional[str] = None
     receipt_url: Optional[str] = None
+    rejection_reason: Optional[str] = None
     status: PettyCashStatus = Field(default=PettyCashStatus.SUBMITTED)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     disbursed_at: Optional[datetime] = None
@@ -161,6 +164,7 @@ class AuditLog(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     company_id: int = Field(foreign_key="company.id")
     request_id: Optional[int] = Field(default=None, foreign_key="procurementrequest.id")
+    petty_cash_id: Optional[int] = Field(default=None, foreign_key="pettycash.id")
     action: str
     from_status: Optional[str] = None
     to_status: Optional[str] = None
@@ -197,9 +201,13 @@ if DB_URL:
     auth_engine = create_engine(fix_postgres_url(AUTH_DB_URL), pool_pre_ping=True)
     procurement_engine = create_engine(fix_postgres_url(DB_URL), pool_pre_ping=True)
 else:
-    # LOCAL: Separate SQLite Files
-    auth_engine = create_engine("sqlite:///./auth.db", connect_args={"check_same_thread": False})
-    procurement_engine = create_engine("sqlite:///./procurement.db", connect_args={"check_same_thread": False})
+    # LOCAL: Separate SQLite Files in the server directory
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    auth_db_path = os.path.join(BASE_DIR, "auth.db")
+    procu_db_path = os.path.join(BASE_DIR, "procurement.db")
+    
+    auth_engine = create_engine(f"sqlite:///{auth_db_path}", connect_args={"check_same_thread": False})
+    procurement_engine = create_engine(f"sqlite:///{procu_db_path}", connect_args={"check_same_thread": False})
 
 def create_db_and_tables():
     # 1. Create Identity Tables in Auth DB (Use User's metadata)

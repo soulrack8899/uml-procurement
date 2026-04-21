@@ -30,8 +30,8 @@
 ## 5. Ongoing / Persistent State
 - **Database:** Auto-syncs missing columns on startup.
 - **Settings:** Active financial thresholds (e.g., > RM 5,000 requiring Director approval).
-- **Release Version:** v0.2.1-STABLE
-- **Release Note:** fix: resolve all P0/P1 bugs — CORS, auth, DB errors, pagination, currency, temp password
+- **Release Version:** v0.2.2-STABLE
+- **Release Note:** feat: harden petty cash module with compliance controls (v0.2.2)
 
 ## 6. Development Instructions
 - **The "No-Line" Rule:** Do not use borders; use background color shifts for sectioning.

@@ -12,6 +12,7 @@ from email.mime.multipart import MIMEMultipart
 # Configure diagnostic logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn.error")
+VERSION = "v0.2.2-STABLE"
 from datetime import datetime
 from sqlmodel import Session, select, SQLModel, func
 from models import (
@@ -23,6 +24,8 @@ from models import (
 )
 from services.po_generator import generate_po_pdf
 from pydantic import BaseModel
+class RejectionRequest(BaseModel):
+    reason: str
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import timedelta
@@ -246,6 +249,27 @@ def on_startup():
                     conn.execute(text("ALTER TABLE pettycash ADD COLUMN ledger_url TEXT"))
                     conn.commit()
                     logger.info("Sync: Added ledger_url column to pettycash.")
+            if "rejection_reason" not in columns:
+                with procurement_engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE pettycash ADD COLUMN rejection_reason TEXT"))
+                    conn.commit()
+                    logger.info("Sync: Added rejection_reason column to pettycash.")
+
+        if "company" in tables:
+            columns = [c['name'] for c in inspector.get_columns("company")]
+            if "petty_cash_limit" not in columns:
+                with procurement_engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE company ADD COLUMN petty_cash_limit REAL DEFAULT 5000.0"))
+                    conn.commit()
+                    logger.info("Sync: Added petty_cash_limit column to company.")
+
+        if "auditlog" in tables:
+            columns = [c['name'] for c in inspector.get_columns("auditlog")]
+            if "petty_cash_id" not in columns:
+                with procurement_engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE auditlog ADD COLUMN petty_cash_id INTEGER"))
+                    conn.commit()
+                    logger.info("Sync: Added petty_cash_id column to auditlog.")
 
         if "vendor" in tables:
             columns = [c['name'] for c in inspector.get_columns("vendor")]
@@ -1249,15 +1273,61 @@ def list_petty_cash(
     query = select(PettyCash).where(PettyCash.company_id == context['company'].id)
     total = b_session.exec(select(func.count()).select_from(query.subquery())).one()
     results = b_session.exec(query.offset(skip).limit(limit)).all()
-    return {"total": total, "items": results, "skip": skip, "limit": limit}
+    
+    # FIX 6: Standard Pagination Format
+    return {
+        "items": results,
+        "total": total,
+        "page": (skip // limit) + 1,
+        "page_size": limit
+    }
 
 @app.post("/petty-cash/", response_model=PettyCash)
 def create_petty_cash(pc: PettyCash, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
     pc.company_id = context['company'].id
     pc.requester_id = context['user'].id
+
+    # FIX 4: Receipt Enforcement
+    if pc.amount > 50.0 and not pc.receipt_url:
+        raise HTTPException(status_code=422, detail="Receipt required for claims above RM50.")
+
+    # FIX 3: Balance Enforcement
+    company = b_session.get(Company, pc.company_id)
+    limit = getattr(company, 'petty_cash_limit', 5000.0)
+    
+    now = datetime.utcnow()
+    month_start = datetime(now.year, now.month, 1)
+    
+    # Total monthly spend (non-rejected)
+    spend_query = select(func.sum(PettyCash.amount)).where(
+        PettyCash.company_id == pc.company_id,
+        PettyCash.status != PettyCashStatus.REJECTED,
+        PettyCash.created_at >= month_start
+    )
+    used = b_session.exec(spend_query).one() or 0.0
+
+    if used + pc.amount > limit:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Petty cash limit exceeded. Monthly limit: RM{limit}, Used: RM{used:.2f}, Requested: RM{pc.amount:.2f}"
+        )
+
     b_session.add(pc)
     b_session.commit()
     b_session.refresh(pc)
+    
+    # Initial Audit Trail
+    b_session.add(AuditLog(
+        company_id=pc.company_id,
+        petty_cash_id=pc.id,
+        action="Petty Cash Claim Submitted",
+        to_status=pc.status,
+        user_name=context['user'].name,
+        user_role=context['active_role']
+    ))
+    b_session.commit()
+    b_session.refresh(pc)
+    
     return pc
 
 @app.post("/petty-cash/{pc_id}/approve")
@@ -1267,10 +1337,50 @@ def approve_petty_cash(pc_id: int, context: dict = Depends(get_active_session_co
     if context['active_role'] not in [UserRole.MANAGER, UserRole.DIRECTOR, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
         raise HTTPException(status_code=403)
     
+    old_status = pc.status
     pc.status = PettyCashStatus.APPROVED
     b_session.add(pc)
+
+    # Audit Trail
+    b_session.add(AuditLog(
+        company_id=pc.company_id,
+        petty_cash_id=pc.id,
+        action="Approved petty cash claim",
+        from_status=old_status,
+        to_status=pc.status,
+        user_name=context['user'].name,
+        user_role=context['active_role']
+    ))
     b_session.commit()
     return {"status": "ok"}
+
+@app.post("/petty-cash/{pc_id}/reject")
+def reject_petty_cash(pc_id: int, reason_data: RejectionRequest, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+    pc = b_session.get(PettyCash, pc_id)
+    if not pc: raise HTTPException(status_code=404)
+    
+    if context['active_role'] not in [UserRole.MANAGER, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
+        raise HTTPException(status_code=403)
+    
+    old_status = pc.status
+    pc.status = PettyCashStatus.REJECTED
+    pc.rejection_reason = reason_data.reason
+    b_session.add(pc)
+
+    # Audit Trail
+    b_session.add(AuditLog(
+        company_id=pc.company_id,
+        petty_cash_id=pc.id,
+        action="Rejected petty cash claim",
+        from_status=old_status,
+        to_status=pc.status,
+        user_name=context['user'].name,
+        user_role=context['active_role'],
+        notes=pc.rejection_reason
+    ))
+    b_session.commit()
+    b_session.refresh(pc)
+    return pc
 
 @app.post("/petty-cash/{pc_id}/disburse")
 def disburse_petty_cash(pc_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
@@ -1279,10 +1389,22 @@ def disburse_petty_cash(pc_id: int, context: dict = Depends(get_active_session_c
     if context['active_role'] not in [UserRole.FINANCE, UserRole.ADMIN, UserRole.GLOBAL_ADMIN]:
         raise HTTPException(status_code=403)
     
+    old_status = pc.status
     pc.status = PettyCashStatus.DISBURSED
     pc.disbursed_at = datetime.utcnow()
     pc.disbursed_by_id = context['user'].id
     b_session.add(pc)
+
+    # Audit Trail
+    b_session.add(AuditLog(
+        company_id=pc.company_id,
+        petty_cash_id=pc.id,
+        action="Disbursed petty cash claim",
+        from_status=old_status,
+        to_status=pc.status,
+        user_name=context['user'].name,
+        user_role=context['active_role']
+    ))
     b_session.commit()
     return {"status": "ok"}
 
