@@ -105,7 +105,7 @@ export const procurementApi = {
   },
 
   generatePO: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/requests/${id}/generate-po`, { headers: getHeaders() });
+    const response = await fetch(`${API_BASE_URL}/api/procurement/${id}/pdf`, { headers: getHeaders() });
     if (!response.ok) throw new Error("Failed to generate PO");
     return response.blob();
   },

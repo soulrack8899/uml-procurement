@@ -419,15 +419,30 @@ const RequestDetails = () => {
                 </button>
               )}
 
-              {request.status === 'PO_ISSUED' && (
-                <button onClick={async () => {
-                  const blob = await procurementApi.generatePO(id)
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url; a.download = `PO-${id}.pdf`; a.click()
-                }} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--primary-fixed)', color: 'var(--primary)', border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 800 }}>
+              {STATUS_ORDER[request.status] >= STATUS_ORDER['APPROVED'] && (
+                <button 
+                  onClick={async () => {
+                    try {
+                      const blob = await procurementApi.generatePO(id)
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `PO-${id.toString().padStart(4, '0')}.pdf`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    } catch (err) {
+                      alert("Failed to download PO: " + err.message)
+                    }
+                  }} 
+                  style={{ 
+                    display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', 
+                    background: 'var(--primary)', color: 'white', border: 'none', 
+                    borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 800,
+                    boxShadow: '0 4px 12px rgba(192, 57, 43, 0.2)'
+                  }}
+                >
                   <Download size={18} />
-                  <span style={{ fontSize: '0.875rem' }}>Final Purchase Order</span>
+                  <span style={{ fontSize: '0.875rem' }}>Download PO (PDF)</span>
                 </button>
               )}
             </div>

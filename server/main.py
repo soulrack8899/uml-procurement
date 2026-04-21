@@ -880,27 +880,79 @@ def transition_request(request_id: int, background_tasks: BackgroundTasks, data:
     return {"status": "ok", "new_status": req.status}
 
 
-@app.get("/requests/{request_id}/generate-po")
-def get_po_report(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session)):
+@app.get("/api/procurement/{request_id}/pdf")
+def get_po_pdf_report(request_id: int, context: dict = Depends(get_active_session_context), b_session: Session = Depends(get_business_session), auth_session: Session = Depends(get_auth_session)):
+    # 1. Fetch Procurement Request & Line Items
     req = b_session.get(ProcurementRequest, request_id)
-    if not req: raise HTTPException(status_code=404)
+    if not req: raise HTTPException(status_code=404, detail="Request not found")
     
-    # Export to dict for po_generator
-    req_dict = {
-        "id": req.id,
+    # Permission Check
+    if context['active_role'] != UserRole.GLOBAL_ADMIN and req.company_id != context['company'].id:
+        raise HTTPException(status_code=403, detail="Unauthorized access to this document")
+
+    # 2. Fetch Company (Tenant) Info
+    company = b_session.get(Company, req.company_id)
+    company_name = company.name if company else "ProcureSure Entity"
+    ship_to = f"{company.address or ''}, {company.city or ''}, {company.state or ''} {company.postal_code or ''}" if company else "HQ Address"
+
+    # 3. Fetch Requester Info
+    requester = auth_session.get(User, req.created_by)
+    requester_name = requester.name if requester else "System"
+
+    # 4. Fetch Approver Info from Audit Logs
+    # We look for the last 'Approved' transition
+    approval_log = b_session.exec(
+        select(AuditLog)
+        .where(AuditLog.request_id == request_id, AuditLog.to_status == StatusEnum.APPROVED)
+        .order_by(AuditLog.timestamp.desc())
+    ).first()
+    
+    approver_name = approval_log.user_name if approval_log else "Pending Approval"
+    date_approved = approval_log.timestamp.strftime("%d %b %Y") if approval_log else "N/A"
+
+    # 5. Format Data for Generator
+    po_number = f"PO-{str(req.id).zfill(4)}"
+    
+    pdf_data = {
+        "po_number": po_number,
+        "date": req.created_at.strftime("%d %b %Y"),
+        "status": req.status.value if hasattr(req.status, 'value') else str(req.status),
+        "tenant_name": company_name,
         "vendor_name": req.vendor_name,
-        "vendor_id": req.vendor_id,
-        "total_amount": req.total_amount,
-        "items": [{"description": i.description, "quantity": i.quantity, "unit_price": i.unit_price, "total_price": i.total_price} for i in req.items]
+        "vendor_details": f"ID: {req.vendor_id}", # Could be expanded if Vendor model was fetched
+        "ship_to": ship_to,
+        "items": [
+            {
+                "description": item.description,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price,
+                "total_price": item.total_price
+            } for item in req.items
+        ],
+        "subtotal": req.total_amount, # Assuming total_amount is sum of items
+        "tax": 0.00,
+        "total": req.total_amount,
+        "notes": req.comments,
+        "requested_by": requester_name,
+        "approved_by": approver_name,
+        "date_approved": date_approved
     }
     
     out_dir = "uploads/pos"
     if not os.path.exists(out_dir): os.makedirs(out_dir)
-    file_path = os.path.join(out_dir, f"PO_{request_id}.pdf")
-    generate_po_pdf(req_dict, file_path)
+    file_path = os.path.join(out_dir, f"{po_number}.pdf")
+    
+    # 6. Generate PDF
+    generate_po_pdf(pdf_data, file_path)
     
     from fastapi.responses import FileResponse
-    return FileResponse(file_path, filename=f"PO_{request_id}.pdf")
+    return FileResponse(
+        file_path, 
+        filename=f"{po_number}.pdf",
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={po_number}.pdf"}
+    )
+
 
 
 
