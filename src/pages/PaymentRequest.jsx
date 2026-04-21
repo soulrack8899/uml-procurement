@@ -23,7 +23,8 @@ const PaymentRequest = () => {
   useEffect(() => {
     const loadPOs = async () => {
       try {
-        const all = await procurementApi.getRequests()
+        const res = await procurementApi.getRequests()
+        const all = res.items || []
         const issued = all.filter(r => r.status === 'PO_ISSUED')
         setPoRequests(issued)
         if (issued.length > 0) setForm(f => ({ ...f, poId: String(issued[0].id) }))

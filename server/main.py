@@ -893,7 +893,7 @@ def get_po_pdf_report(request_id: int, context: dict = Depends(get_active_sessio
     # 2. Fetch Company (Tenant) Info
     company = b_session.get(Company, req.company_id)
     company_name = company.name if company else "ProcureSure Entity"
-    ship_to = f"{company.address or ''}, {company.city or ''}, {company.state or ''} {company.postal_code or ''}" if company else "HQ Address"
+    ship_to = f"{company.email_address or ''}, {company.contact_no or ''}" if company else "HQ Address"
 
     # 3. Fetch Requester Info
     requester = auth_session.get(User, req.created_by)

@@ -33,7 +33,7 @@ def generate_po_pdf(data, output_path):
     styles = getSampleStyleSheet()
     
     # Custom Styles
-    accent_color = colors.hexColor("#C0392B") # Deep Red
+    accent_color = colors.HexColor("#C0392B") # Deep Red
     
     title_style = ParagraphStyle(
         'PO_Title',
